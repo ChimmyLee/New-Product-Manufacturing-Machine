@@ -1,0 +1,1268 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>品类地图 — Category Map</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<style>
+/* ===== Reset & Base ===== */
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Microsoft YaHei", sans-serif;
+  background: #f5f6fa; color: #2d3436; line-height: 1.6; min-height: 100vh;
+}
+/* ===== Header ===== */
+.header {
+  background: linear-gradient(135deg, #2d3436 0%, #434a54 100%);
+  color: #fff; padding: 16px 32px; display: flex; align-items: center;
+  justify-content: space-between; flex-wrap: wrap; gap: 12px;
+}
+.header h1 { font-size: 1.4rem; font-weight: 600; letter-spacing: 0.5px; }
+.header .subtitle { font-size: 0.8rem; opacity: 0.7; }
+/* ===== Toolbar ===== */
+.toolbar {
+  background: #fff; padding: 16px 32px; display: flex; align-items: center;
+  flex-wrap: wrap; gap: 12px; border-bottom: 1px solid #e0e0e0;
+  box-shadow: 0 1px 3px rgba(0,0,0,0.05);
+}
+.btn {
+  display: inline-flex; align-items: center; gap: 6px; padding: 8px 18px;
+  border: none; border-radius: 6px; font-size: 0.9rem; cursor: pointer;
+  font-weight: 500; transition: all 0.2s; white-space: nowrap;
+}
+.btn-primary { background: #0984e3; color: #fff; }
+.btn-primary:hover { background: #0767b3; }
+.btn-success { background: #00b894; color: #fff; }
+.btn-success:hover { background: #009b7d; }
+.btn-outline { background: #fff; color: #636e72; border: 1.5px solid #dfe6e9; }
+.btn-outline:hover { background: #f8f9fa; border-color: #b2bec3; }
+.btn-warning { background: #fdcb6e; color: #2d3436; }
+.btn-warning:hover { background: #f9b845; }
+.btn-sm { padding: 5px 12px; font-size: 0.8rem; }
+.status-badge {
+  font-size: 0.8rem; padding: 4px 12px; border-radius: 12px; font-weight: 500;
+}
+.status-badge.empty { background: #ffeaa7; color: #8b7300; }
+.status-badge.loaded { background: #55efc4; color: #006c4c; }
+/* ===== Config Panel ===== */
+.config-panel {
+  background: #fff; margin: 0; border-bottom: 1px solid #e0e0e0;
+}
+.config-toggle {
+  padding: 10px 32px; cursor: pointer; display: flex; align-items: center;
+  gap: 8px; font-size: 0.85rem; color: #636e72; user-select: none;
+}
+.config-toggle:hover { background: #f8f9fa; }
+.config-toggle .arrow { transition: transform 0.2s; display: inline-block; }
+.config-toggle.open .arrow { transform: rotate(90deg); }
+.config-body { padding: 0 32px 20px; display: none; }
+.config-body.open { display: block; }
+.keyword-group { margin-bottom: 14px; }
+.keyword-group label {
+  font-size: 0.85rem; font-weight: 600; color: #636e72;
+  display: inline-block; min-width: 50px; margin-right: 8px;
+}
+.tag-container {
+  display: inline-flex; flex-wrap: wrap; gap: 6px; align-items: center;
+  vertical-align: middle;
+}
+.tag {
+  display: inline-flex; align-items: center; gap: 4px;
+  padding: 3px 10px; border-radius: 16px; font-size: 0.78rem;
+  background: #e8f4fd; color: #0984e3; border: 1px solid #b8d9f5;
+}
+.tag .tag-remove { cursor: pointer; font-weight: bold; margin-left: 2px; opacity: 0.5; }
+.tag .tag-remove:hover { opacity: 1; color: #d63031; }
+.tag-input {
+  border: 1px dashed #b2bec3; border-radius: 16px; padding: 3px 10px;
+  font-size: 0.78rem; width: 90px; outline: none; background: #fafafa;
+}
+.tag-input:focus { border-color: #0984e3; background: #fff; }
+/* AI input focus */
+#aiKeywordInput:focus { border-color: #0984e3; }
+.ai-loading {
+  display: inline-block; width: 14px; height: 14px; border: 2px solid #dfe6e9;
+  border-top-color: #0984e3; border-radius: 50%; animation: aiSpin 0.6s linear infinite;
+  vertical-align: middle; margin-right: 4px;
+}
+@keyframes aiSpin { to { transform: rotate(360deg); } }
+/* ===== Axis Selectors ===== */
+.axis-selectors {
+  background: #fff; padding: 14px 32px; display: flex; flex-wrap: wrap;
+  gap: 24px; border-bottom: 2px solid #e0e0e0; align-items: center;
+}
+.axis-group { display: flex; align-items: center; gap: 8px; }
+.axis-group .axis-label {
+  font-weight: 700; font-size: 0.85rem; color: #636e72; white-space: nowrap;
+}
+.radio-group { display: flex; gap: 2px; }
+.radio-group input { display: none; }
+.radio-group label {
+  padding: 6px 16px; border: 1.5px solid #dfe6e9; cursor: pointer;
+  font-size: 0.82rem; font-weight: 500; color: #636e72; transition: all 0.15s;
+}
+.radio-group label:first-of-type { border-radius: 6px 0 0 6px; }
+.radio-group label:last-of-type { border-radius: 0 6px 6px 0; }
+.radio-group label:only-of-type { border-radius: 6px; }
+.radio-group input:checked + label {
+  background: #0984e3; color: #fff; border-color: #0984e3;
+}
+/* ===== Map Container ===== */
+.map-container {
+  padding: 20px 24px; overflow: auto; flex: 1;
+}
+.map-wrapper {
+  display: inline-block; min-width: 100%; position: relative;
+}
+/* ===== Map Table ===== */
+.map-table { border-collapse: collapse; font-size: 0.82rem; table-layout: auto; }
+.map-table th, .map-table td {
+  border: 1px solid #dfe6e9; padding: 0; vertical-align: top;
+}
+.map-table th {
+  background: #2d3436; color: #fff; padding: 10px 12px;
+  text-align: center; font-weight: 600; font-size: 0.82rem;
+  position: sticky; top: 0; z-index: 10; min-width: 160px; max-width: 240px;
+  white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+}
+.map-table .row-header {
+  background: #636e72; color: #fff; font-weight: 600; text-align: center;
+  padding: 8px 14px; position: sticky; left: 0; z-index: 5;
+  min-width: 110px; max-width: 180px; white-space: nowrap;
+}
+.map-table .corner-cell {
+  background: #2d3436; position: sticky; top: 0; left: 0; z-index: 15;
+  min-width: 110px; max-width: 180px;
+}
+/* ===== Cell Content ===== */
+.cell-content {
+  padding: 8px; min-width: 170px; max-width: 240px; min-height: 60px;
+  max-height: 360px; overflow-y: auto;
+}
+.cell-content:empty::after {
+  content: "—"; display: flex; align-items: center; justify-content: center;
+  height: 40px; color: #b2bec3; font-size: 1.2rem;
+}
+.product-card {
+  display: flex; gap: 8px; padding: 6px 0; border-bottom: 1px solid #f0f0f0;
+  align-items: flex-start;
+}
+.product-card:last-child { border-bottom: none; }
+.product-card .thumb {
+  width: 56px; height: 56px; object-fit: cover; border-radius: 4px;
+  border: 1px solid #eee; flex-shrink: 0; background: #fafafa;
+  cursor: pointer; transition: transform 0.15s;
+}
+.product-card .thumb:hover { transform: scale(2.2); z-index: 20;
+  box-shadow: 0 4px 16px rgba(0,0,0,0.2); position: relative; }
+.product-card .thumb.error {
+  display: flex; align-items: center; justify-content: center;
+  background: #f0f0f0; color: #b2bec3; font-size: 0.7rem; text-align: center;
+  cursor: default;
+}
+.product-card .thumb.error:hover { transform: none; box-shadow: none; }
+.product-card .info { flex: 1; min-width: 0; }
+.product-card .info .name {
+  font-weight: 600; font-size: 0.8rem; color: #2d3436; line-height: 1.3;
+  display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+  overflow: hidden; margin-bottom: 2px;
+}
+.product-card .info .meta {
+  font-size: 0.72rem; color: #636e72; line-height: 1.4;
+}
+.product-card .info .meta span { display: block; }
+.product-card .info .link {
+  font-size: 0.72rem; color: #0984e3; text-decoration: none; display: inline-block;
+  margin-top: 2px; word-break: break-all;
+}
+.product-card .info .link:hover { text-decoration: underline; }
+/* ===== Empty State ===== */
+.empty-state {
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  padding: 80px 20px; color: #b2bec3;
+}
+.empty-state .icon { font-size: 4rem; margin-bottom: 16px; }
+.empty-state p { font-size: 1rem; max-width: 400px; text-align: center; line-height: 1.6; }
+/* ===== Tooltip for counts ===== */
+.cell-count {
+  font-size: 0.7rem; color: #b2bec3; text-align: right;
+  padding: 2px 4px 0 0; display: flex; align-items: center; justify-content: flex-end; gap: 4px;
+}
+.cell-toggle-btn {
+  display: inline-block; padding: 2px 8px; font-size: 0.7rem;
+  color: #0984e3; cursor: pointer; border: 1px solid #b8d9f5;
+  border-radius: 4px; background: #e8f4fd; transition: all 0.15s;
+  white-space: nowrap; user-select: none;
+}
+.cell-toggle-btn:hover { background: #b8d9f5; border-color: #0984e3; }
+.cell-collapsed { display: none; }
+/* ===== Summary bar ===== */
+.summary-bar {
+  padding: 8px 32px; font-size: 0.8rem; color: #636e72;
+  background: #fff; border-bottom: 1px solid #e0e0e0;
+  display: flex; gap: 24px; flex-wrap: wrap;
+}
+.summary-bar strong { color: #2d3436; }
+/* ===== Toast ===== */
+.toast {
+  position: fixed; bottom: 24px; right: 24px; z-index: 1000;
+  padding: 12px 20px; border-radius: 8px; font-size: 0.85rem;
+  font-weight: 500; color: #fff; opacity: 0; transform: translateY(16px);
+  transition: all 0.3s; pointer-events: none;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.info { background: #0984e3; }
+.toast.success { background: #00b894; }
+.toast.error { background: #d63031; }
+/* ===== Responsive ===== */
+@media (max-width: 768px) {
+  .header, .toolbar, .axis-selectors, .config-body, .summary-bar { padding-left: 16px; padding-right: 16px; }
+  .axis-selectors { flex-direction: column; align-items: flex-start; gap: 12px; }
+  .map-table { font-size: 0.75rem; }
+  .product-card .thumb { width: 44px; height: 44px; }
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div>
+    <h1>📊 品类地图</h1>
+    <div class="subtitle">Category Map — 商品矩阵可视化</div>
+  </div>
+  <div>
+    <span id="dataStatus" class="status-badge empty">未加载数据</span>
+  </div>
+</div>
+
+<!-- Toolbar -->
+<div class="toolbar">
+  <label class="btn btn-primary" style="cursor:pointer;">
+    📤 上传 Excel
+    <input type="file" id="excelInput" accept=".xlsx,.xls" style="display:none">
+  </label>
+  <label class="btn btn-success" style="cursor:pointer;">
+    📤 上传 JSON
+    <input type="file" id="jsonInput" accept=".json" style="display:none">
+  </label>
+  <button class="btn btn-outline" id="downloadJsonBtn" disabled>💾 下载 JSON</button>
+  <button class="btn btn-outline" id="downloadCsvBtn" disabled>📋 导出 CSV</button>
+  <button class="btn btn-outline" id="clearBtn">🗑 清除数据</button>
+</div>
+
+<!-- Keyword Dictionary Config -->
+<div class="config-panel">
+  <div class="config-toggle" id="configToggle">
+    <span class="arrow">▶</span> 编辑关键词词典 与 AI 设置
+    <span style="font-size:0.75rem;color:#b2bec3;margin-left:8px;">点击展开</span>
+  </div>
+  <div class="config-body" id="configBody">
+    <div class="keyword-group">
+      <label>DeepSeek API Key：</label>
+      <input type="password" id="apiKeyInput" placeholder="sk-..."
+        style="padding:6px 12px;border:1.5px solid #dfe6e9;border-radius:6px;font-size:0.82rem;width:320px;outline:none;font-family:monospace;">
+      <button class="btn btn-sm btn-outline" id="saveApiKeyBtn" style="margin-left:6px;">保存</button>
+      <span id="apiKeyStatus" style="font-size:0.75rem;color:#00b894;margin-left:8px;display:none;">✅ 已保存</span>
+    </div>
+    <div class="keyword-group" id="ingredientGroup">
+      <label>成分：</label>
+      <span class="tag-container" id="ingredientTags"></span>
+    </div>
+    <div class="keyword-group" id="formGroup">
+      <label>形态：</label>
+      <span class="tag-container" id="formTags"></span>
+    </div>
+    <div class="keyword-group" id="efficacyGroup">
+      <label>功效：</label>
+      <span class="tag-container" id="efficacyTags"></span>
+    </div>
+    <button class="btn btn-warning btn-sm" id="resetKeywordsBtn" style="margin-top:8px;">🔄 恢复默认关键词</button>
+  </div>
+</div>
+
+<!-- Axis Selectors -->
+<div class="axis-selectors">
+  <div class="axis-group">
+    <span class="axis-label">纵轴 Y：</span>
+    <div class="radio-group" id="yAxisGroup">
+      <input type="radio" name="yAxis" id="yPrice" value="价格带" checked>
+      <label for="yPrice">价格带</label>
+      <input type="radio" name="yAxis" id="ySales" value="销售占比">
+      <label for="ySales">销售占比</label>
+    </div>
+  </div>
+  <div class="axis-group">
+    <span class="axis-label">横轴 X：</span>
+    <div class="radio-group" id="xAxisGroup">
+      <input type="radio" name="xAxis" id="xBrand" value="品牌" checked>
+      <label for="xBrand">品牌</label>
+      <input type="radio" name="xAxis" id="xAi" value="AI关键词" disabled>
+      <label for="xAi" id="xAiLabel">AI分类</label>
+    </div>
+    <input type="text" id="aiKeywordInput" placeholder="输入分类关键词，如：成分、形态、功效…"
+      style="padding:6px 12px;border:1.5px solid #dfe6e9;border-radius:6px;font-size:0.82rem;width:220px;outline:none;">
+    <button class="btn btn-primary btn-sm" id="aiAnalyzeBtn" disabled>🤖 AI 提取</button>
+    <span id="aiStatus" style="font-size:0.75rem;color:#636e72;display:none;"></span>
+  </div>
+</div>
+
+<!-- Summary Bar -->
+<div class="summary-bar" id="summaryBar" style="display:none;">
+  <span>商品总数：<strong id="sumSku">0</strong></span>
+  <span>纵轴分类数：<strong id="sumY">0</strong></span>
+  <span>横轴分类数：<strong id="sumX">0</strong></span>
+  <span>总成交金额：<strong id="sumTotal">¥0</strong></span>
+</div>
+
+<!-- Map Container -->
+<div class="map-container" id="mapContainer">
+  <div class="empty-state" id="emptyState">
+    <div class="icon">🗺️</div>
+    <p>请上传 Excel 或 JSON 数据文件，然后选择纵轴和横轴维度查看品类地图</p>
+    <p style="font-size:0.8rem;margin-top:8px;">
+      支持上传 .xlsx / .xls / .json 格式
+    </p>
+  </div>
+  <div class="map-wrapper" id="mapWrapper" style="display:none;"></div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ======================================================================
+// Global State
+// ======================================================================
+let productData = {}; // { "SKU名称": { sku, "sku link", figure, 价格带, 品牌[], 成分[], 形态[], 功效[], 销售占比 } }
+let totalSales = 0;
+
+// AI state
+let deepseekApiKey = 'apikey';
+let aiKeywords = [];        // top 10 keywords extracted by DeepSeek
+let aiKeywordName = '';     // the user's input keyword (e.g., "成分")
+let aiActive = false;       // whether AI mode is currently active
+
+// ======================================================================
+// Default Keyword Dictionaries
+// ======================================================================
+const DEFAULT_KEYWORDS = {
+  ingredient: [
+    '透明质酸钠', '胶原蛋白',  '神经酰胺',
+   '壳聚糖', '海藻糖', 
+    '熊果苷', '曲酸', '壬二酸', '杏仁酸', '乳糖酸', '麦角硫因', '依克多因',
+    '二裂酵母', '玻色因', 'A醇', '蓝铜胜肽', '富勒烯', '白藜芦醇',
+    '谷胱甘肽'
+  ],
+  form: [
+     '面膜', '乳液', '面霜',  '凝胶', '喷雾', '精华', '精华水',
+    '洁面', '洗面奶','次抛',
+    '冻干粉', '面膜', '乳液', '面霜', '眼霜', '防晒霜',
+   
+  ],
+  efficacy: [
+    '防返黑','修复', '保湿', '补水',  '祛痘', '舒缓', '控油',
+    '清洁', '去角质', '防晒', '隔离','屏障修复',"褪红","医美术后修复",
+    '抗衰老', '抗糖', '抗炎', '去黑头', '收毛孔', '提亮', '去黄',
+    '祛疤', '去痘印', ]
+};
+
+// Current keyword state (copy of defaults at init)
+let keywords = {};
+
+function initKeywords() {
+  keywords = {
+    ingredient: [...DEFAULT_KEYWORDS.ingredient],
+    form: [...DEFAULT_KEYWORDS.form],
+    efficacy: [...DEFAULT_KEYWORDS.efficacy]
+  };
+}
+
+// ======================================================================
+// Price Band Bucketing (for Excel conversion)
+// ======================================================================
+const PRICE_BANDS = [
+  { label: '低价',     display: '低价（<50元）',         min: -Infinity, max: 50,    order: 1 },
+  { label: '中低价',   display: '中低价（50~100元）',     min: 50,        max: 100,   order: 2 },
+  { label: '中价',     display: '中价（100~200元）',      min: 100,       max: 200,   order: 3 },
+  { label: '中高价',   display: '中高价（200~500元）',    min: 200,       max: 500,   order: 4 },
+  { label: '高价',     display: '高价（500~1000元）',     min: 500,       max: 1000,  order: 5 },
+  { label: '超高',     display: '超高（>1000元）',        min: 1000,      max: Infinity, order: 6 },
+  { label: '无数据',   display: '无数据',                 min: null,      max: null,  order: 7 }
+];
+
+function bucketPrice(value) {
+  if (value === null || value === undefined || value === '' || value === 0 || isNaN(Number(value))) {
+    return '无数据';
+  }
+  const num = Number(value);
+  if (num < 50) return '低价（<50元）';
+  if (num < 100) return '中低价（50~100元）';
+  if (num < 200) return '中价（100~200元）';
+  if (num < 500) return '中高价（200~500元）';
+  if (num <= 1000) return '高价（500~1000元）';
+  return '超高（>1000元）';
+}
+
+// ======================================================================
+// Sales Proportion Bucketing (for Excel conversion)
+// ======================================================================
+const SALES_BANDS = [
+  { label: '极低', display: '极低（<0.01%）',    min: -Infinity, max: 0.01, order: 1 },
+  { label: '低',   display: '低（0.01%~0.1%）',  min: 0.01,      max: 0.1,  order: 2 },
+  { label: '较低', display: '较低（0.1%~0.5%）',  min: 0.1,       max: 0.5,  order: 3 },
+  { label: '中',   display: '中（0.5%~1%）',      min: 0.5,       max: 1,    order: 4 },
+  { label: '中高', display: '中高（1%~2%）',       min: 1,         max: 2,    order: 5 },
+  { label: '高',   display: '高（2%~5%）',         min: 2,         max: 5,    order: 6 },
+  { label: '极高', display: '极高（5%~10%）',      min: 5,         max: 10,   order: 7 },
+  { label: '顶流', display: '顶流（>10%）',        min: 10,        max: Infinity, order: 8 }
+];
+
+function bucketSalesProportion(percentage) {
+  if (percentage === null || percentage === undefined || isNaN(percentage)) return '无数据';
+  const pct = Number(percentage);
+  if (pct < 0.01) return '极低（<0.01%）';
+  if (pct < 0.1) return '低（0.01%~0.1%）';
+  if (pct < 0.5) return '较低（0.1%~0.5%）';
+  if (pct < 1) return '中（0.5%~1%）';
+  if (pct < 2) return '中高（1%~2%）';
+  if (pct < 5) return '高（2%~5%）';
+  if (pct <= 10) return '极高（5%~10%）';
+  return '顶流（>10%）';
+}
+
+// ======================================================================
+// Keyword Extraction from SKU Name
+// ======================================================================
+function extractKeywords(skuName, keywordList) {
+  if (!skuName || !keywordList) return [];
+  const found = [];
+  // Sort by length descending so longer phrases match first
+  const sorted = [...keywordList].sort((a, b) => b.length - a.length);
+  for (const kw of sorted) {
+    if (skuName.includes(kw)) {
+      found.push(kw);
+    }
+  }
+  return found;
+}
+
+// ======================================================================
+// DeepSeek AI Integration — Extract classification keywords from SKU names
+// ======================================================================
+async function callDeepSeekAPI(skuNames, userKeyword) {
+  const prompt = `你是一名医用美护采销，对各个品类和产品都非常了解。
+
+通常我们把产品按以下规则归类：
+
+按形态分：
+- "冷敷贴""医用敷料""黑膜""白膜""绿膜""敷贴""面膜"等都可归入面膜形态
+- "乳液状""乳液""乳"相关的都可以归入乳液
+- "膏霜状""霜""膏"归入面霜
+- "水剂""液体敷料""水""精华水""爽肤水"等可以归入水
+- "次抛型""管""棒""安瓶""胶囊"归入次抛
+- 带有"洁面""清洁""洗面""泡沫""慕斯"关键词的都归入洁面
+
+按成分分：
+- "透明质酸"和"透明质酸钠"是同类，可以合并来看
+- 还包括壳聚糖、葡聚糖、海藻糖、抗菌十三肽、依克多因、贻贝粘蛋白、纤连蛋白、聚谷氨酸等
+
+以下是${skuNames.length}个商品SKU名称列表。请根据关键词"${userKeyword}"，从这些SKU名称中提取与"${userKeyword}"相关的具体子分类/类型名称。
+要求：
+1. 提取与关键词相关的具体类型、品类、成分、功效或形态名称，参考上述归类规则
+2. 按在SKU名称中的出现频率从高到低排序
+3. 只保留前10个最相关、出现频率最高的分类名称
+4. 分类名称应简洁准确（2-6个字为宜）
+5. 只返回分类名称，每行一个，不要编号、不要解释、不要空行
+
+示例输出格式（如果关键词是"成分"）：
+透明质酸钠
+烟酰胺
+神经酰胺
+维生素C
+水杨酸
+
+请现在开始分析：`;
+
+  const response = await fetch('https://api.deepseek.com/chat/completions', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': `Bearer ${deepseekApiKey}`
+    },
+    body: JSON.stringify({
+      model: 'deepseek-chat',
+      messages: [
+        { role: 'system', content: '你是一名专业的医用美护采销，对各个品类的产品形态、成分、功效都非常了解。你擅长从商品SKU名称中提取分类关键词，严格遵循医用美护行业的归类规则。只返回分类名称列表，不返回其他内容。' },
+        { role: 'user', content: prompt + '\n\nSKU名称列表：\n' + skuNames.join('\n') }
+      ],
+      temperature: 0.3,
+      max_tokens: 500
+    })
+  });
+
+  if (!response.ok) {
+    const errBody = await response.text();
+    throw new Error(`DeepSeek API 请求失败 (${response.status}): ${errBody}`);
+  }
+
+  const data = await response.json();
+  const content = data.choices?.[0]?.message?.content || '';
+
+  // Parse response: split by newlines, clean up, filter empty
+  const keywords = content
+    .split('\n')
+    .map(line => line.replace(/^[\d.\s、，,]+/, '').trim()) // remove leading numbers/bullets
+    .filter(kw => kw.length > 0 && kw.length <= 20) // reasonable length filter
+    .slice(0, 10); // ensure max 10
+
+  if (keywords.length === 0) {
+    throw new Error('AI 未能提取到有效关键词，请尝试更具体的关键词');
+  }
+
+  return keywords;
+}
+
+async function runAiAnalysis() {
+  const skuNames = Object.keys(productData);
+  if (skuNames.length === 0) {
+    showToast('请先上传数据文件', 'error');
+    return;
+  }
+  if (!deepseekApiKey) {
+    showToast('请先在配置面板中设置 DeepSeek API Key', 'error');
+    return;
+  }
+
+  const userKeyword = document.getElementById('aiKeywordInput').value.trim();
+  if (!userKeyword) {
+    showToast('请输入分类关键词', 'error');
+    return;
+  }
+
+  const btn = document.getElementById('aiAnalyzeBtn');
+  const statusEl = document.getElementById('aiStatus');
+  btn.disabled = true;
+  btn.textContent = '⏳ 分析中...';
+  statusEl.style.display = 'inline';
+  statusEl.innerHTML = '<span class="ai-loading"></span>正在调用 AI 分析 SKU 名称...';
+  aiActive = false;
+
+  try {
+    // Call DeepSeek API
+    const keywords = await callDeepSeekAPI(skuNames, userKeyword);
+
+    if (keywords.length === 0) {
+      throw new Error('AI 未返回有效关键词');
+    }
+
+    // Store results
+    aiKeywords = keywords;
+    aiKeywordName = userKeyword;
+
+    // Classify each SKU against the AI-extracted keywords
+    for (const [skuName, item] of Object.entries(productData)) {
+      item._aiCategory = extractKeywords(skuName, aiKeywords);
+    }
+
+    // Enable AI radio and switch to it
+    const aiRadio = document.getElementById('xAi');
+    aiRadio.disabled = false;
+    aiRadio.checked = true;
+    document.getElementById('xAiLabel').textContent = `AI: ${userKeyword}`;
+    aiActive = true;
+
+    statusEl.innerHTML = `✅ 已提取 ${keywords.length} 个关键词：${keywords.join('、')}`;
+    statusEl.style.color = '#00b894';
+    showToast(`AI 分析完成！提取了 ${keywords.length} 个分类关键词`, 'success');
+
+    // Re-render map with AI keywords
+    renderMap();
+  } catch (err) {
+    statusEl.innerHTML = `❌ ${err.message}`;
+    statusEl.style.color = '#d63031';
+    showToast(err.message, 'error');
+    console.error('AI analysis error:', err);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = '🤖 AI 提取';
+  }
+}
+
+// ======================================================================
+// Excel Parsing & Conversion
+// ======================================================================
+function parseExcel(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = new Uint8Array(e.target.result);
+        const workbook = XLSX.read(data, { type: 'array' });
+        const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+        const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+        resolve(rows);
+      } catch (err) {
+        reject(new Error('Excel 解析失败：' + err.message));
+      }
+    };
+    reader.onerror = () => reject(new Error('文件读取失败'));
+    reader.readAsArrayBuffer(file);
+  });
+}
+
+function convertExcelToJson(rows) {
+  const result = {};
+  let grandTotalSales = 0;
+
+  // First pass: calculate total sales
+  const salesValues = [];
+  for (const row of rows) {
+    const sales = parseFloat(row['成交金额']) || 0;
+    salesValues.push(sales);
+    grandTotalSales += sales;
+  }
+
+  // Second pass: build the JSON
+  for (const row of rows) {
+    const skuName = String(row['sku名称'] || '').trim();
+    if (!skuName) continue;
+
+    const priceValue = parseFloat(row['件单价-成交']) || 0;
+    const priceBand = bucketPrice(priceValue);
+
+    const salesValue = parseFloat(row['成交金额']) || 0;
+    const salesPct = grandTotalSales > 0 ? (salesValue / grandTotalSales) * 100 : 0;
+    const salesBand = bucketSalesProportion(salesPct);
+
+    const brandRaw = String(row['主品牌名称'] || '').trim();
+    const brands = brandRaw ? [brandRaw] : [];
+
+    const ingredients = extractKeywords(skuName, keywords.ingredient);
+    const forms = extractKeywords(skuName, keywords.form);
+    const efficacies = extractKeywords(skuName, keywords.efficacy);
+
+    result[skuName] = {
+      sku: String(row['sku'] || '').trim(),
+      'sku link': String(row['sku商详链接'] || '').trim(),
+      figure: String(row['sku主图'] || '').trim(),
+      '价格带': priceBand,
+      '品牌': brands,
+      '成分': ingredients,
+      '形态': forms,
+      '功效': efficacies,
+      '销售占比': salesBand,
+      '_salesAmount': salesValue
+    };
+  }
+
+  return { data: result, totalSales: grandTotalSales };
+}
+
+// ======================================================================
+// JSON Upload & Validation
+// ======================================================================
+function parseJsonFile(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new FileReader();
+    reader.onload = function(e) {
+      try {
+        const data = JSON.parse(e.target.result);
+        if (typeof data !== 'object' || data === null || Array.isArray(data)) {
+          reject(new Error('JSON 格式错误：需要对象格式，键为SKU名称'));
+          return;
+        }
+        // Validate structure
+        const requiredKeys = ['sku', 'sku link', 'figure', '价格带', '品牌', '成分', '形态', '功效', '销售占比'];
+        for (const [key, val] of Object.entries(data)) {
+          if (typeof val !== 'object' || val === null) {
+            reject(new Error(`JSON 格式错误："${key}" 的值不是对象`));
+            return;
+          }
+          for (const rk of requiredKeys) {
+            if (!(rk in val)) {
+              reject(new Error(`JSON 格式错误："${key}" 缺少字段 "${rk}"`));
+              return;
+            }
+          }
+          // Ensure arrays
+          for (const arrKey of ['品牌', '成分', '形态', '功效']) {
+            if (!Array.isArray(val[arrKey])) {
+              reject(new Error(`JSON 格式错误："${key}" 的 "${arrKey}" 必须是数组`));
+              return;
+            }
+          }
+        }
+        resolve(data);
+      } catch (err) {
+        if (err.message.includes('JSON 格式错误')) {
+          reject(err);
+        } else {
+          reject(new Error('JSON 解析失败：' + err.message));
+        }
+      }
+    };
+    reader.onerror = () => reject(new Error('文件读取失败'));
+    reader.readAsText(file);
+  });
+}
+
+// ======================================================================
+// Load Data (common entry point)
+// ======================================================================
+function loadData(data, totalSalesAmt) {
+  productData = data;
+  totalSales = totalSalesAmt || 0;
+  // Auto-calculate totalSales from _salesAmount if not provided (e.g., JSON import)
+  if (!totalSales) {
+    for (const item of Object.values(data)) {
+      totalSales += (item._salesAmount || 0);
+    }
+  }
+  // Reset AI state on new data load
+  aiKeywords = [];
+  aiKeywordName = '';
+  aiActive = false;
+  const aiRadio = document.getElementById('xAi');
+  aiRadio.disabled = true;
+  aiRadio.checked = false;
+  document.getElementById('xBrand').checked = true;
+  document.getElementById('xAiLabel').textContent = 'AI分类';
+  document.getElementById('aiStatus').style.display = 'none';
+  // Enable AI button if API key is set
+  const hasKeyword = document.getElementById('aiKeywordInput').value.trim().length > 0;
+  document.getElementById('aiAnalyzeBtn').disabled = !(hasKeyword && deepseekApiKey);
+  updateStatus();
+  renderMap();
+  document.getElementById('downloadJsonBtn').disabled = false;
+  document.getElementById('downloadCsvBtn').disabled = false;
+}
+
+function updateStatus() {
+  const count = Object.keys(productData).length;
+  const badge = document.getElementById('dataStatus');
+  badge.textContent = `已加载 ${count} 个SKU`;
+  badge.className = count > 0 ? 'status-badge loaded' : 'status-badge empty';
+  document.getElementById('sumSku').textContent = count;
+  document.getElementById('sumTotal').textContent = '¥' + totalSales.toLocaleString('zh-CN', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+  document.getElementById('summaryBar').style.display = count > 0 ? 'flex' : 'none';
+}
+
+// ======================================================================
+// Map Rendering Engine
+// ======================================================================
+function getYAxisValues() {
+  const yKey = getSelectedYAxis();
+  const values = new Set();
+  for (const item of Object.values(productData)) {
+    const v = item[yKey];
+    if (v) values.add(v);
+  }
+  return sortYAxisValues([...values], yKey);
+}
+
+function getSelectedYAxis() {
+  return document.querySelector('input[name="yAxis"]:checked').value;
+}
+
+function getSelectedXAxis() {
+  const val = document.querySelector('input[name="xAxis"]:checked').value;
+  if (val === 'AI关键词') return '_aiCategory';
+  return val;
+}
+
+function isAiMode() {
+  return document.querySelector('input[name="xAxis"]:checked').value === 'AI关键词';
+}
+
+function sortYAxisValues(values, yKey) {
+  if (yKey === '价格带') {
+    const orderMap = {};
+    PRICE_BANDS.forEach((b, i) => {
+      orderMap[b.label] = i;
+      orderMap[b.display] = i;  // also map the display version
+    });
+    return values.sort((a, b) => (orderMap[a] ?? 99) - (orderMap[b] ?? 99));
+  }
+  if (yKey === '销售占比') {
+    const orderMap = {};
+    SALES_BANDS.forEach((b, i) => {
+      orderMap[b.label] = i;
+      orderMap[b.display] = i;  // also map the display version
+    });
+    return values.sort((a, b) => (orderMap[a] ?? 99) - (orderMap[b] ?? 99));
+  }
+  return values.sort();
+}
+
+function getXAxisValues() {
+  // AI mode: return the AI-extracted keywords directly
+  if (isAiMode()) return [...aiKeywords];
+
+  const xKey = getSelectedXAxis();
+  const values = new Set();
+  for (const item of Object.values(productData)) {
+    const arr = item[xKey];
+    if (Array.isArray(arr)) {
+      for (const v of arr) {
+        if (v) values.add(v);
+      }
+    }
+  }
+  return [...values].sort();
+}
+
+function getProductsForCell(yValue, xValue) {
+  const yKey = getSelectedYAxis();
+  const xKey = getSelectedXAxis();
+  const results = [];
+
+  for (const [skuName, item] of Object.entries(productData)) {
+    const itemY = item[yKey];
+    const itemX = item[xKey];
+
+    // Check Y match
+    if (itemY !== yValue) continue;
+
+    // Check X match
+    if (Array.isArray(itemX)) {
+      if (!itemX.includes(xValue)) continue;
+    } else if (itemX !== undefined) {
+      if (itemX !== xValue) continue;
+    } else {
+      continue;
+    }
+
+    results.push({ skuName, ...item });
+  }
+
+  return results;
+}
+
+function renderMap() {
+  const mapWrapper = document.getElementById('mapWrapper');
+  const emptyState = document.getElementById('emptyState');
+
+  if (Object.keys(productData).length === 0) {
+    mapWrapper.style.display = 'none';
+    emptyState.style.display = 'flex';
+    document.getElementById('sumY').textContent = '0';
+    document.getElementById('sumX').textContent = '0';
+    return;
+  }
+
+  emptyState.style.display = 'none';
+  mapWrapper.style.display = 'block';
+
+  const yValues = getYAxisValues();
+  const xValues = getXAxisValues();
+  const yKey = getSelectedYAxis();
+  const xKey = getSelectedXAxis();
+
+  document.getElementById('sumY').textContent = yValues.length;
+  document.getElementById('sumX').textContent = xValues.length;
+
+  // Calculate row and column sales totals from _salesAmount
+  const rowSales = {};
+  const colSales = {};
+  for (const item of Object.values(productData)) {
+    const sales = item._salesAmount || 0;
+    const itemY = item[yKey];
+    const itemX = item[xKey];
+    if (itemY) rowSales[itemY] = (rowSales[itemY] || 0) + sales;
+    if (Array.isArray(itemX)) {
+      for (const xv of itemX) {
+        if (xv) colSales[xv] = (colSales[xv] || 0) + sales;
+      }
+    } else if (itemX) {
+      colSales[itemX] = (colSales[itemX] || 0) + sales;
+    }
+  }
+  function fmtPct(part) {
+    if (!totalSales) return '0.00%';
+    return ((part / totalSales) * 100).toFixed(2) + '%';
+  }
+
+  // Sort x-axis values by column sales descending (high to low)
+  xValues.sort((a, b) => (colSales[b] || 0) - (colSales[a] || 0));
+
+  // Build table
+  const xDisplay = isAiMode() ? `AI: ${aiKeywordName}` : xKey;
+  let html = '<table class="map-table"><thead><tr>';
+  html += `<th class="corner-cell">${yKey} ↓<br>${xDisplay} →</th>`;
+  for (const xVal of xValues) {
+    const cp = fmtPct(colSales[xVal] || 0);
+    html += `<th title="${escapeHtml(xVal)}">${escapeHtml(xVal)}<br><span style="font-size:0.75rem;font-weight:400;opacity:0.85;">${cp}</span></th>`;
+  }
+  html += '</tr></thead><tbody>';
+
+  for (let yIdx = 0; yIdx < yValues.length; yIdx++) {
+    const yVal = yValues[yIdx];
+    const rp = fmtPct(rowSales[yVal] || 0);
+    html += '<tr>';
+    html += `<td class="row-header" title="${escapeHtml(yVal)}">${escapeHtml(yVal)}<br><span style="font-size:0.72rem;font-weight:400;opacity:0.85;">${rp}</span></td>`;
+    for (let xIdx = 0; xIdx < xValues.length; xIdx++) {
+      const xVal = xValues[xIdx];
+      const products = getProductsForCell(yVal, xVal);
+      const cellId = `cell-${yIdx}-${xIdx}`;
+      html += '<td>';
+      html += `<div class="cell-content" id="${cellId}">`;
+      if (products.length <= 1) {
+        for (const prod of products) {
+          html += renderProductCard(prod);
+        }
+      } else {
+        // Show first product only; rest hidden behind toggle
+        html += renderProductCard(products[0]);
+        html += `<div class="cell-collapsed" id="${cellId}-more">`;
+        for (let pi = 1; pi < products.length; pi++) {
+          html += renderProductCard(products[pi]);
+        }
+        html += '</div>';
+      }
+      html += '</div>';
+      if (products.length > 1) {
+        html += `<div class="cell-count">${products.length} 件商品 <span class="cell-toggle-btn" data-cell="${cellId}" data-count="${products.length - 1}" onclick="toggleCellMore('${cellId}')">展开剩余 ${products.length - 1} 件 ▼</span></div>`;
+      } else if (products.length === 1) {
+        html += `<div class="cell-count">1 件商品</div>`;
+      }
+      html += '</td>';
+    }
+    html += '</tr>';
+  }
+
+  html += '</tbody></table>';
+  mapWrapper.innerHTML = html;
+}
+
+function renderProductCard(prod) {
+  const name = escapeHtml(prod.skuName);
+  const sku = escapeHtml(prod.sku);
+  const link = escapeUrl(prod['sku link']);
+  const figure = escapeUrl(prod.figure);
+
+  let figureHtml = '';
+  if (figure) {
+    figureHtml = `<img class="thumb" src="${figure}" alt="${name}" loading="lazy"
+      onerror="this.onerror=null;this.style.display='none';this.insertAdjacentHTML('afterend','<div class=\\'thumb error\\'>图片<br>加载失败</div>')">`;
+  } else {
+    figureHtml = `<div class="thumb error">无图片</div>`;
+  }
+
+  let linkHtml = '';
+  if (link) {
+    linkHtml = `<a class="link" href="${link}" target="_blank" rel="noopener" title="${escapeHtml(prod['sku link'])}">🔗 查看详情</a>`;
+  }
+
+  return `
+    <div class="product-card">
+      ${figureHtml}
+      <div class="info">
+        <div class="name" title="${name}">${name}</div>
+        <div class="meta">
+          <span>SKU: ${sku}</span>
+        </div>
+        ${linkHtml}
+      </div>
+    </div>`;
+}
+
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function escapeAttr(str) {
+  if (!str) return '';
+  return String(str).replace(/&/g, '&amp;').replace(/"/g, '&quot;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/'/g, '&#39;');
+}
+
+function escapeUrl(str) {
+  if (!str) return '';
+  // Only escape characters that would break HTML attribute boundaries
+  return String(str).replace(/"/g, '%22').replace(/'/g, '%27');
+}
+
+// ======================================================================
+// Cell Toggle — expand/collapse multi-product cells
+// ======================================================================
+function toggleCellMore(cellId) {
+  const moreDiv = document.getElementById(cellId + '-more');
+  const btn = document.querySelector(`[data-cell="${cellId}"]`);
+  if (!moreDiv || !btn) return;
+  const count = parseInt(btn.dataset.count) || 0;
+  if (moreDiv.classList.contains('cell-collapsed')) {
+    moreDiv.classList.remove('cell-collapsed');
+    btn.textContent = '收起 ▲';
+  } else {
+    moreDiv.classList.add('cell-collapsed');
+    btn.textContent = `展开剩余 ${count} 件 ▼`;
+  }
+}
+
+// ======================================================================
+// Keyword Dictionary UI
+// ======================================================================
+function renderKeywordTags() {
+  renderTagGroup('ingredientTags', keywords.ingredient, 'ingredient');
+  renderTagGroup('formTags', keywords.form, 'form');
+  renderTagGroup('efficacyTags', keywords.efficacy, 'efficacy');
+}
+
+function renderTagGroup(containerId, list, category) {
+  const container = document.getElementById(containerId);
+  let html = '';
+  for (let i = 0; i < list.length; i++) {
+    html += `<span class="tag">${escapeHtml(list[i])}<span class="tag-remove" data-category="${category}" data-index="${i}" title="移除">×</span></span>`;
+  }
+  html += `<input class="tag-input" data-category="${category}" placeholder="+添加" style="width:70px;">`;
+  container.innerHTML = html;
+
+  // Bind remove events
+  container.querySelectorAll('.tag-remove').forEach(el => {
+    el.addEventListener('click', function() {
+      const cat = this.dataset.category;
+      const idx = parseInt(this.dataset.index);
+      keywords[cat].splice(idx, 1);
+      renderKeywordTags();
+      showToast('关键词已删除。如已加载数据，请重新上传 Excel 以使更改生效。', 'info');
+    });
+  });
+
+  // Bind add events
+  container.querySelectorAll('.tag-input').forEach(input => {
+    input.addEventListener('keydown', function(e) {
+      if (e.key === 'Enter') {
+        const cat = this.dataset.category;
+        const val = this.value.trim();
+        if (val && !keywords[cat].includes(val)) {
+          keywords[cat].push(val);
+          renderKeywordTags();
+          showToast(`已添加关键词 "${val}"。如已加载数据，请重新上传 Excel 以使更改生效。`, 'success');
+        }
+        this.value = '';
+      }
+    });
+  });
+}
+
+// ======================================================================
+// Download Functions
+// ======================================================================
+function downloadJson() {
+  if (Object.keys(productData).length === 0) {
+    showToast('暂无数据可下载', 'error');
+    return;
+  }
+  const jsonStr = JSON.stringify(productData, null, 2);
+  const blob = new Blob([jsonStr], { type: 'application/json' });
+  downloadBlob(blob, 'category_map_data.json');
+  showToast('JSON 下载成功', 'success');
+}
+
+function downloadCsv() {
+  if (Object.keys(productData).length === 0) {
+    showToast('暂无数据可导出', 'error');
+    return;
+  }
+  const headers = ['SKU名称', 'SKU', 'SKU链接', '主图', '价格带', '品牌', '成分', '形态', '功效', '销售占比'];
+  const rows = [headers.join(',')];
+  for (const [name, item] of Object.entries(productData)) {
+    const row = [
+      csvEscape(name),
+      csvEscape(item.sku),
+      csvEscape(item['sku link']),
+      csvEscape(item.figure),
+      csvEscape(item['价格带']),
+      csvEscape((item['品牌'] || []).join('；')),
+      csvEscape((item['成分'] || []).join('；')),
+      csvEscape((item['形态'] || []).join('；')),
+      csvEscape((item['功效'] || []).join('；')),
+      csvEscape(item['销售占比'])
+    ];
+    rows.push(row.join(','));
+  }
+  const blob = new Blob(['﻿' + rows.join('\n')], { type: 'text/csv;charset=utf-8' });
+  downloadBlob(blob, 'category_map_data.csv');
+  showToast('CSV 导出成功', 'success');
+}
+
+function csvEscape(str) {
+  if (!str) return '';
+  let s = String(str);
+  if (s.includes(',') || s.includes('"') || s.includes('\n')) {
+    s = '"' + s.replace(/"/g, '""') + '"';
+  }
+  return s;
+}
+
+function downloadBlob(blob, filename) {
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = filename;
+  document.body.appendChild(a);
+  a.click();
+  document.body.removeChild(a);
+  URL.revokeObjectURL(url);
+}
+
+// ======================================================================
+// Toast Notification
+// ======================================================================
+let toastTimer;
+function showToast(message, type) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = 'toast ' + type + ' show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toast.className = 'toast ' + type;
+  }, 2500);
+}
+
+// ======================================================================
+// Event Bindings
+// ======================================================================
+document.getElementById('excelInput').addEventListener('change', async function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    showToast('正在解析 Excel 文件...', 'info');
+    const rows = await parseExcel(file);
+    const result = convertExcelToJson(rows);
+    loadData(result.data, result.totalSales);
+    showToast(`Excel 转换成功！共导入 ${Object.keys(result.data).length} 个SKU`, 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+    console.error(err);
+  }
+  this.value = '';
+});
+
+document.getElementById('jsonInput').addEventListener('change', async function(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  try {
+    showToast('正在加载 JSON 文件...', 'info');
+    const data = await parseJsonFile(file);
+    // For direct JSON upload, calculate totalSales from the data if needed (not critical for rendering)
+    loadData(data, 0);
+    showToast(`JSON 加载成功！共导入 ${Object.keys(data).length} 个SKU`, 'success');
+  } catch (err) {
+    showToast(err.message, 'error');
+    console.error(err);
+  }
+  this.value = '';
+});
+
+document.getElementById('downloadJsonBtn').addEventListener('click', downloadJson);
+document.getElementById('downloadCsvBtn').addEventListener('click', downloadCsv);
+
+document.getElementById('clearBtn').addEventListener('click', function() {
+  if (Object.keys(productData).length > 0) {
+    if (!confirm('确定要清除所有已加载的数据吗？')) return;
+  }
+  productData = {};
+  totalSales = 0;
+  aiKeywords = [];
+  aiKeywordName = '';
+  aiActive = false;
+  const aiRadio = document.getElementById('xAi');
+  aiRadio.disabled = true;
+  aiRadio.checked = false;
+  document.getElementById('xBrand').checked = true;
+  document.getElementById('xAiLabel').textContent = 'AI分类';
+  document.getElementById('aiStatus').style.display = 'none';
+  document.getElementById('aiAnalyzeBtn').disabled = true;
+  updateStatus();
+  renderMap();
+  document.getElementById('downloadJsonBtn').disabled = true;
+  document.getElementById('downloadCsvBtn').disabled = true;
+  showToast('数据已清除', 'info');
+});
+
+// Axis change listeners
+document.querySelectorAll('input[name="yAxis"], input[name="xAxis"]').forEach(el => {
+  el.addEventListener('change', function() {
+    aiActive = (document.querySelector('input[name="xAxis"]:checked').value === 'AI关键词');
+    renderMap();
+  });
+});
+
+// AI analysis button
+document.getElementById('aiAnalyzeBtn').addEventListener('click', runAiAnalysis);
+
+// Enable AI button when keyword is typed and data is loaded
+document.getElementById('aiKeywordInput').addEventListener('input', function() {
+  const hasData = Object.keys(productData).length > 0;
+  const hasKeyword = this.value.trim().length > 0;
+  document.getElementById('aiAnalyzeBtn').disabled = !(hasData && hasKeyword && deepseekApiKey);
+});
+
+// Enter key on keyword input triggers AI analysis
+document.getElementById('aiKeywordInput').addEventListener('keydown', function(e) {
+  if (e.key === 'Enter' && !document.getElementById('aiAnalyzeBtn').disabled) {
+    runAiAnalysis();
+  }
+});
+
+// API Key: save to localStorage
+document.getElementById('saveApiKeyBtn').addEventListener('click', function() {
+  const key = document.getElementById('apiKeyInput').value.trim();
+  if (!key) {
+    showToast('请输入有效的 API Key', 'error');
+    return;
+  }
+  deepseekApiKey = key;
+  try { localStorage.setItem('deepseek_api_key', key); } catch(e) {}
+  document.getElementById('apiKeyStatus').style.display = 'inline';
+  // Re-check AI button state
+  const hasData = Object.keys(productData).length > 0;
+  const hasKeyword = document.getElementById('aiKeywordInput').value.trim().length > 0;
+  document.getElementById('aiAnalyzeBtn').disabled = !(hasData && hasKeyword && deepseekApiKey);
+  showToast('API Key 已保存', 'success');
+});
+
+// API Key: load from localStorage on init
+function loadApiKey() {
+  try {
+    const saved = localStorage.getItem('deepseek_api_key');
+    if (saved) {
+      deepseekApiKey = saved;
+      document.getElementById('apiKeyInput').value = saved;
+      document.getElementById('apiKeyStatus').style.display = 'inline';
+    }
+  } catch(e) {}
+}
+
+// Config panel toggle
+document.getElementById('configToggle').addEventListener('click', function() {
+  this.classList.toggle('open');
+  document.getElementById('configBody').classList.toggle('open');
+});
+
+document.getElementById('resetKeywordsBtn').addEventListener('click', function() {
+  initKeywords();
+  renderKeywordTags();
+  showToast('关键词词典已恢复默认。如已加载数据，请重新上传 Excel。', 'info');
+});
+
+// ======================================================================
+// Initialize
+// ======================================================================
+function init() {
+  loadApiKey();
+  initKeywords();
+  renderKeywordTags();
+  renderMap();
+}
+
+init();
+</script>
+
+</body>
+</html>

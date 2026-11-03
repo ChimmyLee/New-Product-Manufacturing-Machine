@@ -1,0 +1,457 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>智能定价 — 新品制造机</title>
+<script src="https://cdn.sheetjs.com/xlsx-0.20.1/package/dist/xlsx.full.min.js"></script>
+<style>
+/* ===== Reset & Base ===== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter','PingFang SC','MiSans',-apple-system,sans-serif;background:#0A1628;color:#E8EDF5;min-height:100vh}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(26,92,255,0.3);border-radius:3px}
+
+/* ===== Header ===== */
+.header{display:flex;align-items:center;justify-content:space-between;padding:20px 40px;border-bottom:1px solid rgba(26,92,255,0.1);background:rgba(13,27,42,0.6)}
+.header-left{display:flex;align-items:center;gap:16px}
+.back-btn{display:flex;align-items:center;gap:6px;padding:8px 16px;border-radius:8px;font-size:13px;cursor:pointer;background:rgba(26,92,255,0.08);color:#7B8EAA;border:none;transition:all 0.2s;text-decoration:none}
+.back-btn:hover{color:#E8EDF5;background:rgba(26,92,255,0.15)}
+.header-left h1{font-size:20px;font-weight:600}
+.header-left .subtitle{font-size:12px;color:#7B8EAA;margin-left:12px}
+
+/* ===== Layout ===== */
+.container{max-width:1200px;margin:0 auto;padding:32px 40px}
+.section{margin-bottom:48px}
+.section-title{font-size:18px;font-weight:500;display:flex;align-items:center;gap:12px;margin-bottom:24px}
+.section-title::before{content:'';width:3px;height:18px;background:linear-gradient(180deg,#1A5CFF,#00E5FF);border-radius:3px;flex-shrink:0}
+.section-desc{font-size:13px;color:#7B8EAA;margin-bottom:24px;line-height:1.6}
+
+/* ===== Cards ===== */
+.card{background:rgba(22,40,70,0.85);border-radius:12px;padding:28px;border:1px solid rgba(26,92,255,0.1);margin-bottom:20px}
+.card h3{font-size:15px;font-weight:500;margin-bottom:20px;color:#E8EDF5}
+
+/* ===== Form Elements ===== */
+.form-row{display:flex;gap:16px;flex-wrap:wrap;align-items:flex-end;margin-bottom:20px}
+.form-group{flex:1;min-width:180px}
+.form-group label{display:block;font-size:12px;color:#7B8EAA;margin-bottom:6px;letter-spacing:0.3px}
+.form-group .unit{font-size:11px;color:#7B8EAA;margin-left:4px}
+.form-input{width:100%;padding:10px 14px;background:rgba(13,27,42,0.85);border:1px solid rgba(26,92,255,0.2);border-radius:8px;color:#E8EDF5;font-size:15px;outline:none;transition:border 0.2s;font-family:inherit}
+.form-input:focus{border-color:#1A5CFF;box-shadow:0 0 0 3px rgba(26,92,255,0.08)}
+.form-input::placeholder{color:rgba(123,142,170,0.4)}
+
+/* ===== Buttons ===== */
+.btn{display:inline-flex;align-items:center;gap:6px;padding:10px 22px;border-radius:8px;font-size:13px;cursor:pointer;transition:all 0.2s;border:none;font-family:inherit;font-weight:500}
+.btn-primary{background:linear-gradient(135deg,#1A5CFF,#2979FF);color:#fff}
+.btn-primary:hover{box-shadow:0 4px 18px rgba(26,92,255,0.35);transform:translateY(-1px)}
+.btn-outline{background:transparent;border:1px solid rgba(26,92,255,0.25);color:#7B8EAA}
+.btn-outline:hover{border-color:#1A5CFF;color:#E8EDF5}
+.btn-success{background:linear-gradient(135deg,#00C853,#00E676);color:#fff}
+.btn-warning{background:linear-gradient(135deg,#FF6D00,#FF9100);color:#fff}
+
+/* ===== Result Display ===== */
+.result-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-top:24px}
+.result-card{background:rgba(13,27,42,0.8);border-radius:10px;padding:22px;text-align:center;border:1px solid rgba(26,92,255,0.15);transition:all 0.3s}
+.result-card:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(26,92,255,0.1)}
+.result-card .label{font-size:12px;color:#7B8EAA;margin-bottom:10px}
+.result-card .value{font-size:28px;font-weight:600;background:linear-gradient(180deg,#fff 20%,#b0c4de 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.result-card.primary{border-color:rgba(26,92,255,0.3);background:rgba(26,92,255,0.06)}
+.result-card.primary .value{background:linear-gradient(180deg,#00E5FF,#1A5CFF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:32px}
+.formula-text{font-size:11px;color:#7B8EAA;margin-top:8px;opacity:0.7}
+
+/* ===== Keyword Selection ===== */
+.keyword-section{display:none}
+.keyword-section.active{display:block}
+.keyword-grid{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:20px;max-height:200px;overflow-y:auto;padding:4px}
+.keyword-check{display:none}
+.keyword-check+label{display:inline-block;padding:6px 14px;border-radius:16px;font-size:12px;cursor:pointer;background:rgba(13,27,42,0.8);border:1px solid rgba(26,92,255,0.12);color:#7B8EAA;transition:all 0.15s;user-select:none}
+.keyword-check:checked+label{background:rgba(26,92,255,0.15);border-color:#1A5CFF;color:#E8EDF5}
+.keyword-check+label:hover{border-color:rgba(26,92,255,0.35)}
+
+/* ===== Upload Area ===== */
+.upload-zone{border:2px dashed rgba(26,92,255,0.2);border-radius:12px;padding:32px;text-align:center;cursor:pointer;transition:all 0.2s;margin-bottom:16px}
+.upload-zone:hover{border-color:rgba(26,92,255,0.5);background:rgba(26,92,255,0.03)}
+.upload-zone .icon{font-size:32px;margin-bottom:8px}
+.upload-zone p{font-size:13px;color:#7B8EAA}
+
+/* ===== Stats row ===== */
+.stats-row{display:flex;gap:16px;flex-wrap:wrap;margin-bottom:16px}
+.stat-item{flex:1;min-width:140px;background:rgba(13,27,42,0.8);border-radius:8px;padding:14px;text-align:center}
+.stat-item .num{font-size:22px;font-weight:600;color:#00E5FF}
+.stat-item .lbl{font-size:11px;color:#7B8EAA;margin-top:4px}
+
+/* ===== Big result ===== */
+.big-result{background:linear-gradient(135deg,rgba(26,92,255,0.08),rgba(0,229,255,0.06));border-radius:12px;padding:24px;border:1px solid rgba(26,92,255,0.15);text-align:center;margin-top:16px}
+.big-result .label{font-size:13px;color:#7B8EAA;margin-bottom:8px}
+.big-result .price{font-size:36px;font-weight:700;background:linear-gradient(180deg,#00E5FF 0%,#1A5CFF 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.big-result .detail{font-size:12px;color:#7B8EAA;margin-top:8px}
+
+/* ===== Divider ===== */
+.divider{height:1px;background:rgba(26,92,255,0.06);margin:40px 0}
+
+/* ===== Toast ===== */
+.toast{position:fixed;bottom:24px;right:24px;z-index:1000;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:500;color:#fff;opacity:0;transform:translateY(16px);transition:all 0.3s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.info{background:#1A5CFF}
+.toast.success{background:#00C853}
+.toast.error{background:#F44336}
+
+/* ===== Responsive ===== */
+@media(max-width:768px){
+  .header,.container{padding-left:16px;padding-right:16px}
+  .result-grid{grid-template-columns:1fr}
+  .form-row{flex-direction:column}
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <a href="设计稿1.html" class="back-btn">← 返回工作台</a>
+    <h1>💲 智能定价</h1>
+    <span class="subtitle">AI 驱动的动态定价策略引擎</span>
+  </div>
+</div>
+
+<div class="container">
+
+  <!-- ===== Part 1: Purchase Price Calculator ===== -->
+  <div class="section">
+    <div class="section-title">采购价计算器</div>
+    <div class="section-desc">
+      基于目标前台毛利率和平台价，反向推算建议采购价区间。公式：<br>
+      <code style="background:rgba(26,92,255,0.08);padding:2px 8px;border-radius:4px;font-size:12px">
+        采购价 = (1 − 毛利率) × 平台价
+      </code>
+    </div>
+
+    <div class="card">
+      <div class="form-row">
+        <div class="form-group">
+          <label>预计前台毛利率 <span class="unit">%</span></label>
+          <input type="number" class="form-input" id="marginTarget" placeholder="例如：30" value="30" step="0.1" min="0" max="100">
+        </div>
+        <div class="form-group">
+          <label>最低预计前台毛利率 <span class="unit">%</span></label>
+          <input type="number" class="form-input" id="marginLow" placeholder="例如：20" value="20" step="0.1" min="0" max="100">
+        </div>
+        <div class="form-group">
+          <label>最高预计前台毛利率 <span class="unit">%</span></label>
+          <input type="number" class="form-input" id="marginHigh" placeholder="例如：40" value="40" step="0.1" min="0" max="100">
+        </div>
+        <div class="form-group">
+          <label>平台价 <span class="unit">¥</span></label>
+          <input type="number" class="form-input" id="companyPrice" placeholder="例如：100" value="100" step="0.01" min="0">
+        </div>
+      </div>
+      <button class="btn btn-primary" onclick="calculatePrice()">📐 计算采购价</button>
+
+      <div class="result-grid" id="calcResults">
+        <div class="result-card">
+          <div class="label">采购价建议最低价</div>
+          <div class="value" id="priceMin">—</div>
+          <div class="formula-text">(1 − 最高毛利率) × 平台价</div>
+        </div>
+        <div class="result-card primary">
+          <div class="label">⭐ 采购价建议价</div>
+          <div class="value" id="priceRec">—</div>
+          <div class="formula-text">(1 − 预计毛利率) × 平台价</div>
+        </div>
+        <div class="result-card">
+          <div class="label">采购价建议最高价</div>
+          <div class="value" id="priceMax">—</div>
+          <div class="formula-text">(1 − 最低毛利率) × 平台价</div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="divider"></div>
+
+  <!-- ===== Part 2: Excel Upload → Front Price ===== -->
+  <div class="section">
+    <div class="section-title">前台价智能计算</div>
+    <div class="section-desc">
+      上传与品类地图相同格式的 Excel 文件，系统自动提取 SKU 名称中的关键词。勾选目标关键词后，计算匹配 SKU 的「件单价-成交」平均值作为建议前台价。
+    </div>
+
+    <div class="card">
+      <!-- Upload -->
+      <label class="upload-zone" id="uploadZone">
+        <div class="icon">📤</div>
+        <p>点击上传 Excel 文件（.xlsx / .xls）</p>
+        <input type="file" id="excelInput" accept=".xlsx,.xls" style="display:none" onchange="handleExcelUpload(event)">
+      </label>
+
+      <!-- Stats -->
+      <div class="stats-row" id="statsRow" style="display:none">
+        <div class="stat-item"><div class="num" id="statTotal">0</div><div class="lbl">总 SKU 数</div></div>
+        <div class="stat-item"><div class="num" id="statKeywords">0</div><div class="lbl">识别关键词数</div></div>
+        <div class="stat-item"><div class="num" id="statMatched">0</div><div class="lbl">匹配 SKU 数</div></div>
+      </div>
+
+      <!-- Keyword Selection -->
+      <div class="keyword-section" id="keywordSection">
+        <h3 style="font-size:13px;color:#7B8EAA;margin-bottom:12px;">请勾选目标关键词（可多选）：</h3>
+        <div class="keyword-grid" id="keywordGrid"></div>
+        <div style="display:flex;gap:8px;margin-bottom:16px">
+          <button class="btn btn-outline btn-sm" onclick="selectAllKeywords()" style="font-size:11px;padding:5px 12px">全选</button>
+          <button class="btn btn-outline btn-sm" onclick="clearAllKeywords()" style="font-size:11px;padding:5px 12px">清空</button>
+        </div>
+        <button class="btn btn-success" onclick="calcAvgPrice()">📊 计算前台价</button>
+      </div>
+
+      <!-- Result -->
+      <div class="big-result" id="bigResult" style="display:none">
+        <div class="label">🎯 建议前台价（选中关键词匹配 SKU 的件单价均值）</div>
+        <div class="price" id="frontPrice">—</div>
+        <div class="detail" id="frontDetail"></div>
+      </div>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ======================================================================
+// Keyword Dictionary (same as category_map.html)
+// ======================================================================
+const KEYWORDS = {
+  ingredient: [
+    '透明质酸钠','透明质酸','胶原蛋白','水杨酸','果酸','烟酰胺','神经酰胺',
+    '虾青素','积雪草','茶树','金缕梅','氨基酸','胜肽','视黄醇',
+    'VC','VE','B5','壳聚糖','海藻糖','甘油','角鲨烷','尿囊素',
+    '熊果苷','曲酸','壬二酸','杏仁酸','乳糖酸','麦角硫因','依克多因',
+    '二裂酵母','玻色因','A醇','蓝铜胜肽','富勒烯','白藜芦醇',
+    '洋甘菊','芦荟','玫瑰','薰衣草','金盏花','马齿苋','光果甘草',
+    '寡肽','三肽','六肽','棕榈酰','谷胱甘肽'
+  ],
+  form: [
+    '贴','膜','液','霜','乳','凝胶','喷雾','精华','水',
+    '乳霜','膏','啫喱','泥','粉','油','洁面','洗面奶',
+    '慕斯','泡沫','皂','棒','笔','球','片','安瓶','次抛',
+    '胶囊','冻干粉','面膜','眼膜','颈膜','手膜','足膜',
+    '爽肤水','柔肤水','精华水','乳液','面霜','眼霜','防晒霜',
+    '隔离霜','BB霜','CC霜','粉底液','卸妆水','卸妆油'
+  ],
+  efficacy: [
+    '修复','保湿','补水','美白','抗皱','祛痘','舒缓','控油',
+    '清洁','抗氧','紧致','淡斑','去角质','防晒','隔离',
+    '抗衰老','抗糖','抗炎','去黑头','收毛孔','提亮','去黄',
+    '淡纹','抚纹','抗敏','去红','修护','焕肤','滋养',
+    '祛疤','去痘印','抗污染','活肤','焕亮','莹润','水润',
+    '透亮','匀亮','光采','弹润','紧实','提升','塑颜'
+  ]
+};
+
+// Flatten all keywords
+function getAllKeywords() {
+  const all = [];
+  for (const cat of Object.values(KEYWORDS)) {
+    for (const kw of cat) {
+      if (!all.includes(kw)) all.push(kw);
+    }
+  }
+  return all.sort((a, b) => b.length - a.length); // sort by length descending
+}
+
+// ======================================================================
+// State
+// ======================================================================
+let excelData = [];       // raw rows from Excel
+let keywordMap = {};      // { keyword: [skuNames] }
+
+// ======================================================================
+// Part 1: Purchase Price Calculator
+// ======================================================================
+function calculatePrice() {
+  const marginTarget = parseFloat(document.getElementById('marginTarget').value) || 0;
+  const marginLow = parseFloat(document.getElementById('marginLow').value) || 0;
+  const marginHigh = parseFloat(document.getElementById('marginHigh').value) || 0;
+  const companyPrice = parseFloat(document.getElementById('companyPrice').value) || 0;
+
+  if (companyPrice <= 0) {
+    showToast('请输入有效的公司价', 'error');
+    return;
+  }
+
+  const priceRec = (1 - marginTarget / 100) * companyPrice;
+  const priceMin = (1 - marginHigh / 100) * companyPrice;
+  const priceMax = (1 - marginLow / 100) * companyPrice;
+
+  document.getElementById('priceMin').textContent = '¥' + priceMin.toFixed(2);
+  document.getElementById('priceRec').textContent = '¥' + priceRec.toFixed(2);
+  document.getElementById('priceMax').textContent = '¥' + priceMax.toFixed(2);
+
+  // Pulse animation
+  document.querySelectorAll('.result-card').forEach(c => {
+    c.style.transform = 'scale(1.02)';
+    setTimeout(() => { c.style.transform = ''; }, 300);
+  });
+
+  showToast('计算完成', 'success');
+}
+
+// Trigger initial calculation
+setTimeout(calculatePrice, 100);
+
+// ======================================================================
+// Part 2: Excel Upload & Keyword Selection
+// ======================================================================
+function handleExcelUpload(event) {
+  const file = event.target.files[0];
+  if (!file) return;
+  showToast('正在解析 Excel 文件...', 'info');
+
+  const reader = new FileReader();
+  reader.onload = function(e) {
+    try {
+      const data = new Uint8Array(e.target.result);
+      const workbook = XLSX.read(data, { type: 'array' });
+      const firstSheet = workbook.Sheets[workbook.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(firstSheet, { defval: '' });
+      excelData = rows;
+
+      // Extract keywords from all SKU names
+      const allKeywords = getAllKeywords();
+      keywordMap = {};
+
+      for (const row of rows) {
+        const skuName = String(row['sku名称'] || '').trim();
+        if (!skuName) continue;
+        for (const kw of allKeywords) {
+          if (skuName.includes(kw)) {
+            if (!keywordMap[kw]) keywordMap[kw] = [];
+            keywordMap[kw].push(skuName);
+          }
+        }
+      }
+
+      // Update UI
+      document.getElementById('statTotal').textContent = rows.filter(r => String(r['sku名称']||'').trim()).length;
+      document.getElementById('statKeywords').textContent = Object.keys(keywordMap).length;
+      document.getElementById('statMatched').textContent = '—';
+      document.getElementById('statsRow').style.display = 'flex';
+
+      renderKeywordCheckboxes();
+      document.getElementById('keywordSection').classList.add('active');
+      document.getElementById('bigResult').style.display = 'none';
+
+      showToast(`解析完成，识别到 ${Object.keys(keywordMap).length} 个关键词`, 'success');
+    } catch (err) {
+      showToast('Excel 解析失败：' + err.message, 'error');
+    }
+  };
+  reader.onerror = () => showToast('文件读取失败', 'error');
+  reader.readAsArrayBuffer(file);
+}
+
+function renderKeywordCheckboxes() {
+  const grid = document.getElementById('keywordGrid');
+  const keywords = Object.keys(keywordMap).sort((a, b) => keywordMap[b].length - keywordMap[a].length);
+
+  let html = '';
+  for (const kw of keywords) {
+    const count = keywordMap[kw].length;
+    html += `
+      <input type="checkbox" class="keyword-check" id="kw_${escapeId(kw)}" value="${escapeHtml(kw)}">
+      <label for="kw_${escapeId(kw)}">${escapeHtml(kw)} <span style="font-size:10px;opacity:0.6">(${count})</span></label>
+    `;
+  }
+  grid.innerHTML = html || '<span style="color:#7B8EAA;font-size:12px">未识别到关键词</span>';
+}
+
+function selectAllKeywords() {
+  document.querySelectorAll('.keyword-check').forEach(cb => { cb.checked = true; });
+}
+
+function clearAllKeywords() {
+  document.querySelectorAll('.keyword-check').forEach(cb => { cb.checked = false; });
+}
+
+function calcAvgPrice() {
+  const checked = document.querySelectorAll('.keyword-check:checked');
+  if (checked.length === 0) {
+    showToast('请至少勾选一个关键词', 'error');
+    return;
+  }
+
+  const selectedKeywords = Array.from(checked).map(cb => cb.value);
+
+  // Get unique SKU names matching any selected keyword
+  const matchedSkus = new Set();
+  for (const kw of selectedKeywords) {
+    if (keywordMap[kw]) {
+      for (const sku of keywordMap[kw]) {
+        matchedSkus.add(sku);
+      }
+    }
+  }
+
+  // Calculate average of "件单价-成交" for matched SKUs
+  let totalPrice = 0;
+  let count = 0;
+  const matchedNames = [];
+
+  for (const row of excelData) {
+    const skuName = String(row['sku名称'] || '').trim();
+    if (matchedSkus.has(skuName)) {
+      const price = parseFloat(row['件单价-成交']) || 0;
+      if (price > 0) {
+        totalPrice += price;
+        count++;
+        matchedNames.push(skuName);
+      }
+    }
+  }
+
+  if (count === 0) {
+    showToast('匹配的 SKU 中没有有效的件单价数据', 'error');
+    return;
+  }
+
+  const avgPrice = totalPrice / count;
+
+  document.getElementById('statMatched').textContent = count;
+  document.getElementById('frontPrice').textContent = '¥' + avgPrice.toFixed(2);
+  document.getElementById('frontDetail').textContent =
+    `基于 ${selectedKeywords.length} 个选中关键词，匹配 ${count} 个 SKU 计算得出（总匹配 ${matchedSkus.size} 个 SKU，其中 ${count} 个有有效价格数据）`;
+  document.getElementById('bigResult').style.display = 'block';
+
+  // Scroll to result
+  document.getElementById('bigResult').scrollIntoView({ behavior: 'smooth', block: 'center' });
+  showToast('前台价计算完成', 'success');
+}
+
+// ======================================================================
+// Utility
+// ======================================================================
+function escapeHtml(str) {
+  if (!str) return '';
+  const div = document.createElement('div');
+  div.textContent = str;
+  return div.innerHTML;
+}
+
+function escapeId(str) {
+  return String(str).replace(/[^a-zA-Z0-9一-鿿]/g, '_');
+}
+
+let toastTimer;
+function showToast(message, type) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = 'toast ' + type + ' show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.className = 'toast ' + type; }, 2500);
+}
+</script>
+
+</body>
+</html>

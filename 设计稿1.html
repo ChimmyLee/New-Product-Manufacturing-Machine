@@ -1,0 +1,567 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>新品制造机 - 设计预览</title>
+<style>
+*{margin:0;padding:0;box-sizing:border-box;font-family:'Inter','PingFang SC','MiSans',-apple-system,sans-serif}
+body{background:#0A1628;color:#E8EDF5}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(26,92,255,0.3);border-radius:3px}
+.layout{display:flex;min-height:100vh}
+.sidebar{width:240px;min-height:100vh;background:#0D1B2A;border-right:1px solid rgba(26,92,255,0.15);padding:24px 0;position:fixed;left:0;top:0;overflow-y:auto;z-index:100}
+.logo-area{padding:0 24px 24px;border-bottom:1px solid rgba(26,92,255,0.08);margin-bottom:12px}
+.logo-text{background:linear-gradient(135deg,#1A5CFF,#00E5FF);-webkit-background-clip:text;-webkit-text-fill-color:transparent;font-size:22px;font-weight:700;letter-spacing:1px}
+.logo-sub{font-size:11px;color:#7B8EAA;margin-top:6px;letter-spacing:0.5px}
+.nav-group{font-size:11px;color:#7B8EAA;text-transform:uppercase;letter-spacing:1px;padding:16px 24px 8px;opacity:0.6}
+.nav-item{display:flex;align-items:center;gap:12px;padding:12px 24px;font-size:14px;color:#7B8EAA;cursor:pointer;transition:all 0.2s;position:relative}
+.nav-item:hover{color:#E8EDF5;background:rgba(26,92,255,0.05)}
+.nav-item.active{color:#1A5CFF;background:rgba(26,92,255,0.08);font-weight:500}
+.nav-item.active::before{content:'';position:absolute;left:0;top:4px;bottom:4px;width:3px;background:linear-gradient(180deg,#1A5CFF,#00E5FF);border-radius:0 3px 3px 0}
+.nav-divider{height:1px;background:rgba(26,92,255,0.06);margin:12px 24px}
+.main{margin-left:240px;flex:1;padding:0 40px 60px;max-width:1400px}
+.header-bar{display:flex;justify-content:space-between;align-items:center;padding:24px 0 32px;border-bottom:1px solid rgba(26,92,255,0.06)}
+.header-left h1{font-size:28px;font-weight:600;letter-spacing:0.5px}
+.header-left p{font-size:14px;color:#7B8EAA;margin-top:6px}
+.header-right{display:flex;gap:20px;align-items:center}
+.header-btn{display:flex;align-items:center;gap:6px;padding:8px 18px;border-radius:8px;font-size:13px;cursor:pointer;transition:all 0.2s;background:rgba(26,92,255,0.08);color:#1A5CFF;border:none}
+.header-btn:hover{background:rgba(26,92,255,0.15)}
+.header-btn.primary{background:linear-gradient(135deg,#1A5CFF,#2979FF);color:#fff}
+.section{margin:40px 0}
+.section-title{font-size:20px;font-weight:500;display:flex;align-items:center;gap:14px;margin-bottom:24px}
+.section-title::before{content:'';width:4px;height:20px;background:linear-gradient(180deg,#1A5CFF,#00E5FF);border-radius:3px;flex-shrink:0}
+.kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:16px}
+.kpi-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.kpi-card{background:rgba(22,40,70,0.85);border-radius:12px;padding:20px;border:1px solid rgba(26,92,255,0.1);position:relative;overflow:hidden;transition:all 0.3s}
+.kpi-card:hover{transform:translateY(-3px);box-shadow:0 10px 40px rgba(0,229,255,0.06)}
+.kpi-card .glow{position:absolute;top:-40%;right:-40%;width:120px;height:120px;border-radius:50%;background:radial-gradient(circle,rgba(0,229,255,0.05),transparent 70%);pointer-events:none}
+.kpi-icon-wrap{width:36px;height:36px;border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:18px;margin-bottom:14px}
+.kpi-label{font-size:12px;color:#7B8EAA;margin-bottom:8px;letter-spacing:0.3px}
+.kpi-value{font-size:26px;font-weight:600;margin-bottom:6px;background:linear-gradient(180deg,#fff 30%,#b0c4de 100%);-webkit-background-clip:text;-webkit-text-fill-color:transparent}
+.kpi-trend{font-size:12px;display:flex;align-items:center;gap:4px}
+.kpi-trend.up{color:#00C853}.kpi-trend.down{color:#F44336}
+.card-grid-4{display:grid;grid-template-columns:repeat(4,1fr);gap:16px}
+.action-card{background:rgba(22,40,70,0.85);border-radius:12px;padding:24px;border:1px solid rgba(26,92,255,0.08);cursor:pointer;transition:all 0.3s}
+.action-card:hover{border-color:rgba(26,92,255,0.3);transform:translateY(-2px);box-shadow:0 8px 30px rgba(0,229,255,0.04)}
+.action-card .icon-bg{font-size:28px;margin-bottom:16px;width:48px;height:48px;display:flex;align-items:center;justify-content:center;background:rgba(26,92,255,0.08);border-radius:12px}
+.action-card h3{font-size:16px;font-weight:500;margin-bottom:8px}
+.action-card p{font-size:13px;color:#7B8EAA;line-height:1.7;margin-bottom:16px}
+.badge{display:inline-block;font-size:11px;padding:3px 10px;border-radius:4px;font-weight:500}
+.badge.hot{background:rgba(255,214,0,0.12);color:#FFD600}
+.badge.new{background:rgba(0,229,255,0.12);color:#00E5FF}
+.funnel-grid{display:flex;gap:12px;padding:8px 0}
+.funnel-item{flex:1;display:flex;flex-direction:column;align-items:center}
+.funnel-bar{width:100%;border-radius:6px;display:flex;align-items:flex-end;justify-content:center;padding-top:12px;position:relative;transition:all 0.3s}
+.funnel-bar:hover{opacity:0.85}
+.funnel-label{font-size:12px;margin-top:10px;text-align:center}
+.funnel-count{position:absolute;top:8px;font-size:13px;font-weight:500;color:#fff;text-shadow:0 1px 3px rgba(0,0,0,0.3)}
+.chart-card{background:rgba(22,40,70,0.85);border-radius:12px;padding:24px;border:1px solid rgba(26,92,255,0.08);margin-bottom:24px}
+.chart-card h3{font-size:16px;font-weight:500;margin-bottom:20px}
+.table-card{background:rgba(22,40,70,0.85);border-radius:12px;padding:24px;border:1px solid rgba(26,92,255,0.08)}
+.table-card h3{font-size:16px;font-weight:500;margin-bottom:16px}
+table{width:100%;border-collapse:collapse}
+table th{text-align:left;padding:12px 16px;font-size:11px;font-weight:500;color:#7B8EAA;border-bottom:1px solid rgba(26,92,255,0.08);text-transform:uppercase;letter-spacing:0.8px}
+table td{padding:12px 16px;border-bottom:1px solid rgba(26,92,255,0.04);font-size:13px}
+table tr:hover{background:rgba(26,92,255,0.03)}
+.filter-row{display:flex;gap:12px;margin-bottom:24px;flex-wrap:wrap}
+.filter-select{padding:8px 14px;background:rgba(13,27,42,0.85);border:1px solid rgba(26,92,255,0.15);border-radius:8px;color:#E8EDF5;font-size:13px;cursor:pointer;outline:none;transition:border 0.2s}
+.filter-select:focus{border-color:#1A5CFF}
+.bar-chart{display:flex;gap:6px;height:160px;align-items:flex-end;padding:8px 0}
+.bar-group{flex:1;display:flex;flex-direction:column;align-items:center}
+.bar-stack{width:70%;display:flex;flex-direction:column;gap:2px}
+.bar-stack div{border-radius:3px;transition:all 0.2s}
+.bar-stack div:hover{opacity:0.8}
+.bar-label{font-size:10px;color:#7B8EAA;margin-top:8px}
+.split-2{display:grid;grid-template-columns:1fr 1fr;gap:24px}
+.insight-card{background:rgba(22,40,70,0.85);border-radius:12px;padding:24px;border:1px solid rgba(26,92,255,0.08)}
+.insight-card h3{font-size:16px;font-weight:500;margin-bottom:16px}
+.insight-item{padding:12px 0;border-bottom:1px solid rgba(26,92,255,0.04);display:flex;justify-content:space-between;align-items:center}
+.insight-item:last-child{border:none}
+.insight-item .label{font-size:13px;color:#7B8EAA}
+.insight-item .value{font-size:14px;font-weight:500}
+.recommend-bar{background:linear-gradient(135deg,rgba(26,92,255,0.08),rgba(0,229,255,0.06));border-radius:12px;padding:24px;border:1px solid rgba(26,92,255,0.12);margin-top:24px}
+.recommend-bar .label{font-size:13px;color:#7B8EAA;margin-bottom:12px}
+.recommend-bar .price-area{display:flex;justify-content:space-between;align-items:center}
+.recommend-bar .price{font-size:32px;font-weight:600}
+.recommend-bar .confidence{font-size:14px;color:#00C853;margin-left:8px}
+.btn-group{display:flex;gap:8px}
+.btn{display:inline-flex;align-items:center;gap:6px;padding:8px 20px;border-radius:8px;font-size:13px;cursor:pointer;transition:all 0.2s;border:none;font-family:inherit}
+.btn-primary{background:linear-gradient(135deg,#1A5CFF,#2979FF);color:#fff}
+.btn-primary:hover{box-shadow:0 4px 15px rgba(26,92,255,0.3)}
+.btn-outline{background:transparent;border:1px solid rgba(26,92,255,0.25);color:#7B8EAA}
+.btn-outline:hover{border-color:#1A5CFF;color:#E8EDF5}
+.chart-row{display:flex;gap:4px;height:200px;align-items:flex-end;padding:16px 0}
+.chart-row .col{flex:1;display:flex;flex-direction:column;align-items:center}
+.chart-bars{display:flex;gap:2px;width:60%;align-items:flex-end;height:100%}
+.chart-bars div{border-radius:3px;transition:opacity 0.2s}
+.chart-bars div:hover{opacity:0.7}
+.date-tick{font-size:10px;color:#7B8EAA;margin-top:8px}
+.pie-legend{display:flex;gap:16px;justify-content:center;flex-wrap:wrap;margin-top:16px}
+.pie-legend span{display:flex;align-items:center;gap:6px;font-size:12px}
+.pie-legend .dot{width:8px;height:8px;border-radius:2px}
+</style>
+</head>
+<body>
+<div class="layout">
+
+<!-- ========== SIDEBAR ========== -->
+<aside class="sidebar">
+  <div class="logo-area">
+    <div class="logo-text">🚀 新品制造机</div>
+    <div class="logo-sub">全链路新品孵化决策引擎</div>
+  </div>
+
+  <div class="nav-item active" onclick="location.href='设计稿1.html'">
+    <span style="font-size:16px">📊</span> 工作台概览
+  </div>
+  <div class="nav-item" onclick="window.open('category_map.html','_blank')">
+    <span style="font-size:16px">🗺️</span> 品类地图·新品孵化
+  </div>
+  <div class="nav-divider"></div>
+  <div class="nav-item" onclick="location.href='pricing.html'">
+    <span style="font-size:16px">💲</span> 新品定价
+  </div>
+  <div class="nav-item" onclick="location.href='agent.html'">
+    <span style="font-size:16px">🚀</span> 营销方案设计·打爆
+  </div>
+  <div class="nav-divider"></div>
+  <div class="nav-item" onclick="window.open('https://osw.jd.com/myflow/9/9?path=/spreadsheets/126397191856128','_blank')">
+    <span style="font-size:16px">📈</span> 销售复盘
+  </div>
+</aside>
+
+<!-- ========== MAIN ========== -->
+<main class="main">
+
+  <!-- Header -->
+  <header class="header-bar">
+    <div class="header-left">
+      <h1>新品制造机</h1>
+      <p>新品制造机 · 全链路新品孵化决策引擎</p>
+    </div>
+    <div class="header-right">
+      <button class="header-btn">📄 导出报告</button>
+      <button class="header-btn primary">+ 新建方案</button>
+      <span style="font-size:20px;cursor:pointer;color:#7B8EAA">🔔</span>
+      <span style="width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,#1A5CFF,#00E5FF);display:flex;align-items:center;justify-content:center;font-size:13px;color:#fff;font-weight:600">F</span>
+    </div>
+  </header>
+
+  <!-- ====== 1. 工作台概览 ====== -->
+  <section class="section">
+    <div class="section-title">全局态势感知</div>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="glow"></div>
+        <div class="kpi-icon-wrap" style="background:rgba(26,92,255,0.12);color:#1A5CFF">📈</div>
+        <div class="kpi-label">孵化中新品</div>
+        <div class="kpi-value">1,286</div>
+        <div class="kpi-trend up">↑ +23.5%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="glow"></div>
+        <div class="kpi-icon-wrap" style="background:rgba(0,200,83,0.12);color:#00C853">✅</div>
+        <div class="kpi-label">已上市新品</div>
+        <div class="kpi-value">847</div>
+        <div class="kpi-trend up">↑ +12.8%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="glow"></div>
+        <div class="kpi-icon-wrap" style="background:rgba(124,77,255,0.12);color:#7C4DFF">💰</div>
+        <div class="kpi-label">累计 GMV</div>
+        <div class="kpi-value">¥4.2亿</div>
+        <div class="kpi-trend up">↑ +31.2%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="glow"></div>
+        <div class="kpi-icon-wrap" style="background:rgba(255,109,0,0.12);color:#FF6D00">⭐</div>
+        <div class="kpi-label">爆品率</div>
+        <div class="kpi-value">18.6%</div>
+        <div class="kpi-trend up">↑ +5.3pp</div>
+      </div>
+      <div class="kpi-card">
+        <div class="glow"></div>
+        <div class="kpi-icon-wrap" style="background:rgba(244,67,54,0.12);color:#F44336">🔬</div>
+        <div class="kpi-label">孵化成功率</div>
+        <div class="kpi-value">67.2%</div>
+        <div class="kpi-trend down">↓ -2.1%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="glow"></div>
+        <div class="kpi-icon-wrap" style="background:rgba(2,136,209,0.12);color:#0288D1">👥</div>
+        <div class="kpi-label">参与品类</div>
+        <div class="kpi-value">12</div>
+        <div class="kpi-trend up">↑ +3</div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 快捷入口 -->
+  <section class="section">
+    <div class="section-title">快捷入口</div>
+    <div class="card-grid-4">
+      <div class="action-card" onclick="window.open('category_map.html','_blank')" title="点击打开品类地图">
+        <div class="icon-bg">🗺️</div>
+        <h3>品类地图分析</h3>
+        <p>查看品类孵化全景，洞察趋势与机会</p>
+        <span class="badge hot">热点</span>
+      </div>
+      <div class="action-card" onclick="location.href='pricing.html'" title="点击打开智能定价工具">
+        <div class="icon-bg">💲</div>
+        <h3>智能定价</h3>
+        <p>AI 驱动的动态定价策略，一键生成推荐</p>
+        <span class="badge new">新功能</span>
+      </div>
+      <div class="action-card" onclick="location.href='agent.html'" title="点击打开AI打爆方案助手">
+        <div class="icon-bg">🚀</div>
+        <h3>打爆方案</h3>
+        <p>组合营销策略，快速打造爆品链路</p>
+      </div>
+      <div class="action-card" onclick="window.open('https://osw.jd.com/myflow/9/9?path=/spreadsheets/126397191856128','_blank')" title="点击打开销售复盘看板（外部链接）">
+        <div class="icon-bg">📈</div>
+        <h3>销售复盘</h3>
+        <p>深度复盘新品表现，优化后续策略</p>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== 2. 品类地图 ====== -->
+  <section class="section">
+    <div class="section-title">品类地图 · 新品孵化</div>
+
+    <div class="kpi-grid-4" style="margin-bottom:24px">
+      <div class="kpi-card" style="background:linear-gradient(135deg,rgba(26,92,255,0.1),rgba(0,229,255,0.04))">
+        <div class="kpi-icon-wrap" style="background:rgba(26,92,255,0.15);color:#1A5CFF">🗂️</div>
+        <div class="kpi-label">在孵品类</div>
+        <div class="kpi-value" style="font-size:28px">23</div>
+        <div class="kpi-trend up">↑ +2</div>
+      </div>
+      <div class="kpi-card" style="background:linear-gradient(135deg,rgba(0,200,83,0.1),rgba(0,229,255,0.04))">
+        <div class="kpi-icon-wrap" style="background:rgba(0,200,83,0.15);color:#00C853">🧪</div>
+        <div class="kpi-label">孵化中 SKU</div>
+        <div class="kpi-value" style="font-size:28px">1,286</div>
+        <div class="kpi-trend up">↑ +187</div>
+      </div>
+      <div class="kpi-card" style="background:linear-gradient(135deg,rgba(255,214,0,0.1),rgba(0,229,255,0.04))">
+        <div class="kpi-icon-wrap" style="background:rgba(255,214,0,0.15);color:#FFD600">🔄</div>
+        <div class="kpi-label">孵化转化率</div>
+        <div class="kpi-value" style="font-size:28px">34.7%</div>
+        <div class="kpi-trend up">↑ +2.1pp</div>
+      </div>
+      <div class="kpi-card" style="background:linear-gradient(135deg,rgba(255,109,0,0.1),rgba(0,229,255,0.04))">
+        <div class="kpi-icon-wrap" style="background:rgba(255,109,0,0.15);color:#FF6D00">⏱️</div>
+        <div class="kpi-label">平均孵化周期</div>
+        <div class="kpi-value" style="font-size:28px">42天</div>
+        <div class="kpi-trend up">↓ -3天</div>
+      </div>
+    </div>
+
+    <!-- 漏斗 -->
+    <div class="chart-card">
+      <h3>品类孵化漏斗</h3>
+      <div class="funnel-grid">
+        <div class="funnel-item">
+          <div class="funnel-bar" style="height:100px;background:linear-gradient(180deg,#1A5CFF,rgba(26,92,255,0.2))">
+            <span class="funnel-count">2,860</span>
+          </div>
+          <div class="funnel-label">品类发现</div>
+        </div>
+        <div class="funnel-item">
+          <div class="funnel-bar" style="height:80px;background:linear-gradient(180deg,#2979FF,rgba(26,92,255,0.2))">
+            <span class="funnel-count">2,100</span>
+          </div>
+          <div class="funnel-label">可行性评估</div>
+        </div>
+        <div class="funnel-item">
+          <div class="funnel-bar" style="height:62px;background:linear-gradient(180deg,#448AFF,rgba(26,92,255,0.2))">
+            <span class="funnel-count">1,286</span>
+          </div>
+          <div class="funnel-label">孵化试验</div>
+        </div>
+        <div class="funnel-item">
+          <div class="funnel-bar" style="height:46px;background:linear-gradient(180deg,#00C853,rgba(0,200,83,0.2))">
+            <span class="funnel-count">847</span>
+          </div>
+          <div class="funnel-label">试产验证</div>
+        </div>
+        <div class="funnel-item">
+          <div class="funnel-bar" style="height:32px;background:linear-gradient(180deg,#00E676,rgba(0,229,255,0.2))">
+            <span class="funnel-count">623</span>
+          </div>
+          <div class="funnel-label">上市推广</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- 趋势 + 明细 -->
+    <div class="split-2">
+      <div class="chart-card">
+        <h3>品类孵化趋势（近 12 月）</h3>
+        <div class="chart-row" style="height:150px">
+          <div class="col"><div class="chart-bars" style="height:60%"><div style="flex:1;background:#1A5CFF;height:100%"></div><div style="flex:1;background:#00E5FF;height:40%"></div></div><div class="date-tick">1月</div></div>
+          <div class="col"><div class="chart-bars" style="height:65%"><div style="flex:1;background:#1A5CFF;height:100%"></div><div style="flex:1;background:#00E5FF;height:42%"></div></div><div class="date-tick">3月</div></div>
+          <div class="col"><div class="chart-bars" style="height:78%"><div style="flex:1;background:#1A5CFF;height:100%"></div><div style="flex:1;background:#00E5FF;height:50%"></div></div><div class="date-tick">5月</div></div>
+          <div class="col"><div class="chart-bars" style="height:85%"><div style="flex:1;background:#1A5CFF;height:100%"></div><div style="flex:1;background:#00E5FF;height:55%"></div></div><div class="date-tick">7月</div></div>
+          <div class="col"><div class="chart-bars" style="height:90%"><div style="flex:1;background:#1A5CFF;height:100%"></div><div style="flex:1;background:#00E5FF;height:58%"></div></div><div class="date-tick">9月</div></div>
+          <div class="col"><div class="chart-bars" style="height:95%"><div style="flex:1;background:#1A5CFF;height:100%"></div><div style="flex:1;background:#00E5FF;height:60%"></div></div><div class="date-tick">12月</div></div>
+        </div>
+        <div style="display:flex;gap:16px;font-size:12px;color:#7B8EAA;margin-top:8px">
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#1A5CFF;margin-right:4px;vertical-align:middle"></span>在孵数</span>
+          <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#00E5FF;margin-right:4px;vertical-align:middle"></span>转化数</span>
+        </div>
+      </div>
+      <div class="insight-card">
+        <h3>品类洞察</h3>
+        <div class="insight-item">
+          <span class="label">🚀 增长最快品类</span>
+          <span class="value" style="color:#00E5FF">智能家居 ↑38%</span>
+        </div>
+        <div class="insight-item">
+          <span class="label">🎯 高转化区间</span>
+          <span class="value" style="color:#00C853">美妆个护 52%</span>
+        </div>
+        <div class="insight-item">
+          <span class="label">⚠️ 待关注品类</span>
+          <span class="value" style="color:#FFD600">宠物用品 需求激增</span>
+        </div>
+        <div class="insight-item">
+          <span class="label">📊 最大品类</span>
+          <span class="value">智能家居 25.5%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card" style="margin-top:24px">
+      <h3>品类孵化明细</h3>
+      <table>
+        <tr><th>品类名称</th><th>在孵 SKU</th><th>孵化阶段</th><th>预计上市</th><th>负责人</th><th>状态</th></tr>
+        <tr><td>智能家居</td><td>328</td><td>可行性评估</td><td>2026-08</td><td>张明</td><td style="color:#00E5FF">进行中</td></tr>
+        <tr><td>健康食品</td><td>215</td><td>孵化试验</td><td>2026-10</td><td>李婷</td><td style="color:#00E5FF">进行中</td></tr>
+        <tr><td>美妆个护</td><td>180</td><td>试产验证</td><td>2026-07</td><td>王芳</td><td style="color:#FFD600">待审核</td></tr>
+        <tr><td>母婴用品</td><td>156</td><td>品类发现</td><td>2026-12</td><td>陈磊</td><td style="color:#7B8EAA">待启动</td></tr>
+        <tr><td>运动户外</td><td>120</td><td>上市推广</td><td>2026-06</td><td>刘洋</td><td style="color:#00C853">已通过</td></tr>
+        <tr><td>宠物用品</td><td>98</td><td>可行性评估</td><td>2026-09</td><td>赵敏</td><td style="color:#00E5FF">进行中</td></tr>
+        <tr><td>家用电器</td><td>86</td><td>孵化试验</td><td>2026-11</td><td>周杰</td><td style="color:#00E5FF">进行中</td></tr>
+        <tr><td>数码配件</td><td>73</td><td>品类发现</td><td>2026-12</td><td>吴强</td><td style="color:#7B8EAA">待启动</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ====== 3. 新品定价 ====== -->
+  <section class="section">
+    <div class="section-title">新品定价</div>
+    <div class="subtitle" style="color:#7B8EAA;font-size:14px;margin-top:-16px;margin-bottom:24px">AI 智能定价策略引擎 · 数据驱动的价格决策</div>
+
+    <div class="filter-row">
+      <select class="filter-select"><option>全部品类</option><option>智能家居</option><option>健康食品</option><option>美妆个护</option></select>
+      <select class="filter-select"><option>全部价格带</option><option>0-50</option><option>50-100</option><option>100-200</option></select>
+      <select class="filter-select"><option>渗透定价</option><option>撇脂定价</option><option>竞争导向</option></select>
+    </div>
+
+    <div class="chart-card">
+      <h3>竞品价格区间分布 · 机会区间</h3>
+      <div class="bar-chart" style="height:180px">
+        <div class="bar-group">
+          <div class="bar-stack" style="height:20%"><div style="background:#1A5CFF;height:60%;flex-shrink:0"></div><div style="background:#7B8EAA;height:100%;flex-shrink:0"></div></div>
+          <div class="bar-label">0-20</div>
+        </div>
+        <div class="bar-group">
+          <div class="bar-stack" style="height:30%"><div style="background:#1A5CFF;height:100%"></div><div style="background:#7B8EAA;height:78%"></div></div>
+          <div class="bar-label">20-50</div>
+        </div>
+        <div class="bar-group">
+          <div class="bar-stack" style="height:50%"><div style="background:#1A5CFF;height:100%"></div><div style="background:#7B8EAA;height:88%"></div></div>
+          <div class="bar-label">50-100</div>
+        </div>
+        <div class="bar-group">
+          <div class="bar-stack" style="height:75%"><div style="background:#1A5CFF;height:100%"></div><div style="background:#7B8EAA;height:75%"></div></div>
+          <div class="bar-label">100-200</div>
+        </div>
+        <div class="bar-group highlight">
+          <div class="bar-stack" style="height:55%"><div style="background:#00E5FF;height:100%"></div><div style="background:#7B8EAA;height:25%"></div></div>
+          <div class="bar-label" style="color:#00E5FF;font-weight:500">机会区间</div>
+        </div>
+        <div class="bar-group">
+          <div class="bar-stack" style="height:30%"><div style="background:#1A5CFF;height:100%"></div><div style="background:#7B8EAA;height:120%"></div></div>
+          <div class="bar-label">500+</div>
+        </div>
+      </div>
+      <div style="display:flex;gap:16px;font-size:12px;color:#7B8EAA;margin-top:8px">
+        <span><span style="display:inline-block;width:10px;height:10px;background:#1A5CFF;margin-right:4px;vertical-align:middle;border-radius:2px"></span>本品牌</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:#7B8EAA;margin-right:4px;vertical-align:middle;border-radius:2px"></span>竞品</span>
+      </div>
+    </div>
+
+    <div class="recommend-bar">
+      <div class="label">🤖 AI 定价推荐 · 置信度 88%</div>
+      <div class="price-area">
+        <div>
+          <span class="price">¥158</span>
+          <span class="confidence">✓ 基于品类 48% 渗透率、竞品区间空档、成本结构最优</span>
+        </div>
+        <div class="btn-group">
+          <button class="btn btn-primary">采纳推荐</button>
+          <button class="btn btn-outline">手动调整</button>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card" style="margin-top:24px">
+      <h3>价格带机会矩阵</h3>
+      <table>
+        <tr><th>价格带</th><th>在售 SKU</th><th>平均月销量</th><th>毛利空间</th><th>机会指数</th></tr>
+        <tr><td>0-20</td><td>12</td><td>3,200</td><td>8%</td><td>1.2</td></tr>
+        <tr><td>20-50</td><td>45</td><td>8,500</td><td>18%</td><td>2.8</td></tr>
+        <tr><td>50-100</td><td>78</td><td>12,600</td><td>28%</td><td>4.5</td></tr>
+        <tr><td><span style="color:#00E5FF;font-weight:500">100-200</span></td><td>56</td><td>6,800</td><td>35%</td><td>3.6</td></tr>
+        <tr><td>200-500</td><td>32</td><td>3,200</td><td>42%</td><td>2.1</td></tr>
+        <tr><td>500-1000</td><td>18</td><td>1,200</td><td>48%</td><td>0.8</td></tr>
+        <tr><td>1000+</td><td>6</td><td>450</td><td>55%</td><td>0.3</td></tr>
+      </table>
+    </div>
+  </section>
+
+  <!-- ====== 4. 营销方案设计 ====== -->
+  <section class="section">
+    <div class="section-title">营销方案设计 · 新品打爆</div>
+    <div class="subtitle" style="color:#7B8EAA;font-size:14px;margin-top:-16px;margin-bottom:24px">组合营销策略引擎 · 多维度渠道配置 · 爆品路径规划</div>
+
+    <div class="filter-row">
+      <select class="filter-select"><option>全部阶段</option><option>预热期</option><option>爆发期</option></select>
+      <select class="filter-select"><option>全部渠道</option><option>站内</option><option>站外</option><option>直播</option></select>
+      <button class="btn btn-primary" style="margin-left:auto">+ 新建方案</button>
+    </div>
+
+    <div class="split-2">
+      <div class="chart-card">
+        <h3>渠道效能雷达</h3>
+        <div style="display:flex;gap:8px;flex-wrap:wrap;justify-content:center">
+          <div style="background:rgba(26,92,255,0.06);border-radius:10px;padding:16px;width:calc(33% - 6px);text-align:center">
+            <div style="background:linear-gradient(180deg,#1A5CFF,rgba(26,92,255,0.3));height:60px;border-radius:8px;margin-bottom:8px"></div>
+            <div style="font-size:12px;color:#7B8EAA">曝光</div>
+            <div style="font-size:14px;font-weight:500">95</div>
+          </div>
+          <div style="background:rgba(0,200,83,0.06);border-radius:10px;padding:16px;width:calc(33% - 6px);text-align:center">
+            <div style="background:linear-gradient(180deg,#00C853,rgba(0,200,83,0.3));height:50px;border-radius:8px;margin-bottom:8px"></div>
+            <div style="font-size:12px;color:#7B8EAA">点击</div>
+            <div style="font-size:14px;font-weight:500">80</div>
+          </div>
+          <div style="background:rgba(0,229,255,0.06);border-radius:10px;padding:16px;width:calc(33% - 6px);text-align:center">
+            <div style="background:linear-gradient(180deg,#00E5FF,rgba(0,229,255,0.3));height:45px;border-radius:8px;margin-bottom:8px"></div>
+            <div style="font-size:12px;color:#7B8EAA">转化</div>
+            <div style="font-size:14px;font-weight:500">75</div>
+          </div>
+          <div style="background:rgba(255,214,0,0.06);border-radius:10px;padding:16px;width:calc(33% - 6px);text-align:center">
+            <div style="background:linear-gradient(180deg,#FFD600,rgba(255,214,0,0.3));height:55px;border-radius:8px;margin-bottom:8px"></div>
+            <div style="font-size:12px;color:#7B8EAA">ROI</div>
+            <div style="font-size:14px;font-weight:500">82</div>
+          </div>
+          <div style="background:rgba(124,77,255,0.06);border-radius:10px;padding:16px;width:calc(33% - 6px);text-align:center">
+            <div style="background:linear-gradient(180deg,#7C4DFF,rgba(124,77,255,0.3));height:35px;border-radius:8px;margin-bottom:8px"></div>
+            <div style="font-size:12px;color:#7B8EAA">复购</div>
+            <div style="font-size:14px;font-weight:500">65</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="chart-card">
+        <h3>打爆方案清单</h3>
+        <table>
+          <tr><th>方案</th><th>品类</th><th>预算</th><th>ROI</th><th>状态</th></tr>
+          <tr><td>智能家居新品发布</td><td>智能家居</td><td>50万</td><td>3.5x</td><td style="color:#00E5FF">执行中</td></tr>
+          <tr><td>健康食品礼盒装</td><td>健康食品</td><td>30万</td><td>4.2x</td><td style="color:#FFD600">待审核</td></tr>
+          <tr><td>美妆联名款</td><td>美妆个护</td><td>80万</td><td>2.8x</td><td style="color:#7B8EAA">规划中</td></tr>
+          <tr><td>运动户外夏季上新</td><td>运动户外</td><td>25万</td><td>5.0x</td><td style="color:#00C853">已完成</td></tr>
+          <tr><td>母婴爆品矩阵</td><td>母婴用品</td><td>60万</td><td>3.2x</td><td style="color:#7B8EAA">规划中</td></tr>
+        </table>
+      </div>
+    </div>
+  </section>
+
+  <!-- ====== 5. 销售复盘 ====== -->
+  <section class="section">
+    <div class="section-title">新品销售复盘</div>
+    <div class="subtitle" style="color:#7B8EAA;font-size:14px;margin-top:-16px;margin-bottom:24px">全链路销售数据复盘 · 归因分析与策略优化</div>
+
+    <div class="kpi-grid-4" style="margin-bottom:24px">
+      <div class="kpi-card">
+        <div class="glow"></div>
+        <div class="kpi-icon-wrap" style="background:rgba(26,92,255,0.12);color:#1A5CFF">🛒</div>
+        <div class="kpi-label">总销量</div>
+        <div class="kpi-value" style="font-size:28px">128,600</div>
+        <div class="kpi-trend up">↑ +18.3%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="glow"></div>
+        <div class="kpi-icon-wrap" style="background:rgba(0,200,83,0.12);color:#00C853">💰</div>
+        <div class="kpi-label">总 GMV</div>
+        <div class="kpi-value" style="font-size:28px">¥6,800万</div>
+        <div class="kpi-trend up">↑ +25.7%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="glow"></div>
+        <div class="kpi-icon-wrap" style="background:rgba(255,214,0,0.12);color:#FFD600">🏷️</div>
+        <div class="kpi-label">平均客单价</div>
+        <div class="kpi-value" style="font-size:28px">¥528</div>
+        <div class="kpi-trend up">↑ +12%</div>
+      </div>
+      <div class="kpi-card">
+        <div class="glow"></div>
+        <div class="kpi-icon-wrap" style="background:rgba(255,109,0,0.12);color:#FF6D00">📈</div>
+        <div class="kpi-label">整体 ROI</div>
+        <div class="kpi-value" style="font-size:28px">3.2x</div>
+        <div class="kpi-trend up">↑ +0.8x</div>
+      </div>
+    </div>
+
+    <div class="split-2" style="margin-bottom:24px">
+      <div class="chart-card">
+        <h3>销量趋势（近 6 月）</h3>
+        <div class="chart-row" style="height:160px">
+          <div class="col"><div class="chart-bars" style="height:45%"><div style="flex:1;background:linear-gradient(180deg,#1A5CFF,rgba(26,92,255,0.3));height:100%;border-radius:3px"></div></div><div class="date-tick">1月</div></div>
+          <div class="col"><div class="chart-bars" style="height:55%"><div style="flex:1;background:linear-gradient(180deg,#1A5CFF,rgba(26,92,255,0.3));height:100%;border-radius:3px"></div></div><div class="date-tick">2月</div></div>
+          <div class="col"><div class="chart-bars" style="height:68%"><div style="flex:1;background:linear-gradient(180deg,#1A5CFF,rgba(26,92,255,0.3));height:100%;border-radius:3px"></div></div><div class="date-tick">3月</div></div>
+          <div class="col"><div class="chart-bars" style="height:78%"><div style="flex:1;background:linear-gradient(180deg,#1A5CFF,rgba(26,92,255,0.3));height:100%;border-radius:3px"></div></div><div class="date-tick">4月</div></div>
+          <div class="col"><div class="chart-bars" style="height:88%"><div style="flex:1;background:linear-gradient(180deg,#1A5CFF,rgba(26,92,255,0.3));height:100%;border-radius:3px"></div></div><div class="date-tick">5月</div></div>
+          <div class="col"><div class="chart-bars" style="height:95%"><div style="flex:1;background:linear-gradient(180deg,#1A5CFF,rgba(0,229,255,0.3));height:100%;border-radius:3px"></div></div><div class="date-tick">6月</div></div>
+        </div>
+      </div>
+      <div class="chart-card">
+        <h3>渠道销量占比</h3>
+        <div style="display:flex;justify-content:center;padding:24px 0">
+          <div style="width:130px;height:130px;border-radius:50%;
+          background:conic-gradient(#1A5CFF 0deg 151deg,#00E5FF 151deg 252deg,#00C853 252deg 317deg,#FFD600 317deg 360deg);
+          display:flex;align-items:center;justify-content:center">
+            <div style="width:75px;height:75px;border-radius:50%;background:#0D1B2A;display:flex;align-items:center;justify-content:center;font-size:13px;color:#7B8EAA">100%</div>
+          </div>
+        </div>
+        <div class="pie-legend">
+          <span><span class="dot" style="background:#1A5CFF"></span>站内搜索 42%</span>
+          <span><span class="dot" style="background:#00E5FF"></span>内容推荐 28%</span>
+          <span><span class="dot" style="background:#00C853"></span>直播带货 18%</span>
+          <span><span class="dot" style="background:#FFD600"></span>达人营销 12%</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="table-card">
+      <h3>SKU 维度详细复盘数据</h3>
+      <table>
+        <tr><th>SKU 名称</th><th>品类</th><th>销量</th><th>GMV</th><th>ROI</th><th>毛利率</th><th>评分</th></tr>
+        <tr><td>智能门锁 Pro</td><td>智能家居</td><td>18,200</td><td>¥910万</td><td>4.2x</td><td>45%</td><td>4.8</td></tr>
+        <tr><td>胶原蛋白面膜</td><td>美妆个护</td><td>22,400</td><td>¥660万</td><td>2.8x</td><td>52%</td><td>4.9</td></tr>
+        <tr><td>有机坚果礼盒</td><td>健康食品</td><td>12,600</td><td>¥252万</td><td>3.8x</td><td>38%</td><td>4.6</td></tr>
+        <tr><td>婴儿湿巾</td><td>母婴用品</td><td>15,800</td><td>¥158万</td><td>5.0x</td><td>35%</td><td>4.5</td></tr>
+        <tr><td>速干运动T恤</td><td>运动户外</td><td>9,500</td><td>¥190万</td><td>3.5x</td><td>42%</td><td>4.3</td></tr>
+        <tr><td>智能烘干机</td><td>家用电器</td><td>6,200</td><td>¥310万</td><td>2.2x</td><td>28%</td><td>3.8</td></tr>
+        <tr><td>宠物自动喂食器</td><td>宠物用品</td><td>4,800</td><td>¥95万</td><td>4.5x</td><td>32%</td><td>4.7</td></tr>
+      </table>
+    </div>
+  </section>
+
+</main>
+</div>
+</body>
+</html>

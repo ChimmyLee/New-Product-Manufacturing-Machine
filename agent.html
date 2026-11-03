@@ -1,0 +1,522 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>打爆方案 — AI 营销助手</title>
+<style>
+/* ===== Reset & Base ===== */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+body{font-family:'Inter','PingFang SC','MiSans',-apple-system,sans-serif;background:#0A1628;color:#E8EDF5;height:100vh;display:flex;flex-direction:column}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:rgba(26,92,255,0.3);border-radius:3px}
+
+/* ===== Header ===== */
+.header{display:flex;align-items:center;justify-content:space-between;padding:14px 24px;border-bottom:1px solid rgba(26,92,255,0.1);background:rgba(13,27,42,0.95);flex-shrink:0;z-index:10}
+.header-left{display:flex;align-items:center;gap:12px}
+.back-btn{display:flex;align-items:center;gap:6px;padding:6px 14px;border-radius:8px;font-size:12px;cursor:pointer;background:rgba(26,92,255,0.08);color:#7B8EAA;border:none;transition:all 0.2s;text-decoration:none}
+.back-btn:hover{color:#E8EDF5;background:rgba(26,92,255,0.15)}
+.header-left h1{font-size:18px;font-weight:600}
+.status-dot{width:8px;height:8px;border-radius:50%;display:inline-block;margin-right:4px}
+.status-dot.online{background:#00C853;box-shadow:0 0 6px rgba(0,200,83,0.5)}
+.status-dot.offline{background:#F44336}
+.status-text{font-size:12px;color:#7B8EAA}
+.header-right{display:flex;gap:8px;align-items:center}
+.btn-icon{padding:8px 12px;border-radius:8px;font-size:13px;cursor:pointer;background:rgba(26,92,255,0.08);color:#7B8EAA;border:none;transition:all 0.2s}
+.btn-icon:hover{background:rgba(26,92,255,0.15);color:#E8EDF5}
+.btn-icon.active{background:rgba(26,92,255,0.18);color:#1A5CFF}
+
+/* ===== Layout ===== */
+.main-layout{display:flex;flex:1;overflow:hidden}
+.chat-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.settings-panel{width:300px;background:rgba(13,27,42,0.95);border-left:1px solid rgba(26,92,255,0.1);padding:20px;overflow-y:auto;display:none;flex-shrink:0}
+.settings-panel.open{display:block}
+.settings-panel h3{font-size:14px;font-weight:500;margin-bottom:16px;color:#E8EDF5}
+.settings-group{margin-bottom:18px}
+.settings-group label{display:block;font-size:11px;color:#7B8EAA;margin-bottom:5px;letter-spacing:0.3px}
+.settings-input{width:100%;padding:8px 12px;background:rgba(13,27,42,0.8);border:1px solid rgba(26,92,255,0.15);border-radius:6px;color:#E8EDF5;font-size:13px;outline:none;font-family:inherit}
+.settings-input:focus{border-color:#1A5CFF}
+.settings-textarea{width:100%;min-height:80px;padding:8px 12px;background:rgba(13,27,42,0.8);border:1px solid rgba(26,92,255,0.15);border-radius:6px;color:#E8EDF5;font-size:12px;outline:none;resize:vertical;font-family:inherit}
+.settings-textarea:focus{border-color:#1A5CFF}
+.settings-hint{font-size:10px;color:#7B8EAA;margin-top:4px;opacity:0.7}
+
+/* ===== Messages ===== */
+.messages{flex:1;overflow-y:auto;padding:24px;display:flex;flex-direction:column;gap:16px}
+.message{display:flex;gap:10px;max-width:85%;animation:fadeIn 0.3s}
+@keyframes fadeIn{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
+.message.user{flex-direction:row-reverse;align-self:flex-end}
+.message.assistant{align-self:flex-start}
+.message .avatar{width:34px;height:34px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:16px;flex-shrink:0}
+.message.user .avatar{background:linear-gradient(135deg,#1A5CFF,#2979FF)}
+.message.assistant .avatar{background:linear-gradient(135deg,#00C853,#00E676)}
+.message .bubble{padding:12px 16px;border-radius:12px;font-size:13px;line-height:1.6;word-break:break-word}
+.message.user .bubble{background:linear-gradient(135deg,#1A5CFF,#2979FF);color:#fff;border-bottom-right-radius:4px}
+.message.assistant .bubble{background:rgba(22,40,70,0.85);border:1px solid rgba(26,92,255,0.08);color:#E8EDF5;border-bottom-left-radius:4px}
+.message .time{font-size:10px;color:#7B8EAA;margin-top:4px}
+.message.user .time{text-align:right}
+.message.assistant .time{text-align:left}
+.message .bubble pre{background:rgba(0,0,0,0.3);padding:10px;border-radius:6px;overflow-x:auto;font-size:12px;margin:8px 0}
+.message .bubble code{font-size:12px}
+.typing-indicator{display:flex;gap:6px;padding:12px 16px}
+.typing-indicator span{width:6px;height:6px;border-radius:50%;background:#7B8EAA;animation:typing 1.4s infinite}
+.typing-indicator span:nth-child(2){animation-delay:0.2s}
+.typing-indicator span:nth-child(3){animation-delay:0.4s}
+@keyframes typing{0%,60%,100%{opacity:0.3}30%{opacity:1}}
+
+/* ===== Input Area ===== */
+.input-area{padding:16px 24px;border-top:1px solid rgba(26,92,255,0.08);background:rgba(13,27,42,0.9);flex-shrink:0}
+.input-row{display:flex;gap:10px;align-items:flex-end}
+.input-box{flex:1;padding:12px 16px;background:rgba(22,40,70,0.7);border:1px solid rgba(26,92,255,0.15);border-radius:10px;color:#E8EDF5;font-size:14px;outline:none;resize:none;font-family:inherit;max-height:120px;line-height:1.5}
+.input-box:focus{border-color:#1A5CFF;box-shadow:0 0 0 3px rgba(26,92,255,0.06)}
+.input-box::placeholder{color:rgba(123,142,170,0.4)}
+.send-btn{padding:10px 20px;background:linear-gradient(135deg,#1A5CFF,#2979FF);color:#fff;border:none;border-radius:10px;font-size:14px;cursor:pointer;transition:all 0.2s;font-family:inherit;flex-shrink:0}
+.send-btn:hover{box-shadow:0 4px 15px rgba(26,92,255,0.3)}
+.send-btn:disabled{opacity:0.5;cursor:not-allowed}
+.input-hint{font-size:11px;color:#7B8EAA;margin-top:8px;text-align:center}
+
+/* ===== Empty State ===== */
+.empty-chat{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;color:#7B8EAA;gap:8px}
+.empty-chat .icon{font-size:48px;margin-bottom:8px;opacity:0.5}
+.empty-chat h3{font-size:16px;font-weight:500;color:#9AAEC9}
+.empty-chat p{font-size:13px;max-width:360px;text-align:center;line-height:1.6}
+
+/* ===== Prompt Templates ===== */
+.prompt-chips{display:flex;gap:8px;flex-wrap:wrap;padding:12px 24px 0}
+.prompt-chip{padding:6px 14px;border-radius:16px;font-size:12px;cursor:pointer;background:rgba(26,92,255,0.06);border:1px solid rgba(26,92,255,0.1);color:#7B8EAA;transition:all 0.15s;white-space:nowrap}
+.prompt-chip:hover{border-color:rgba(26,92,255,0.35);color:#E8EDF5;background:rgba(26,92,255,0.12)}
+
+/* ===== Toast ===== */
+.toast{position:fixed;bottom:24px;right:24px;z-index:1000;padding:12px 20px;border-radius:8px;font-size:13px;font-weight:500;color:#fff;opacity:0;transform:translateY(16px);transition:all 0.3s;pointer-events:none}
+.toast.show{opacity:1;transform:translateY(0)}
+.toast.info{background:#1A5CFF}
+.toast.success{background:#00C853}
+.toast.error{background:#F44336}
+
+@media(max-width:768px){
+  .settings-panel{position:fixed;top:0;right:0;bottom:0;z-index:50;width:280px}
+  .message{max-width:92%}
+}
+</style>
+</head>
+<body>
+
+<!-- Header -->
+<div class="header">
+  <div class="header-left">
+    <a href="设计稿1.html" class="back-btn">← 返回工作台</a>
+    <h1>🚀 打爆方案 · AI 营销助手</h1>
+    <span class="status-dot" id="statusDot"></span>
+    <span class="status-text" id="statusText">检测中...</span>
+  </div>
+  <div class="header-right">
+    <button class="btn-icon" id="settingsToggle" title="设置">⚙️ 设置</button>
+    <button class="btn-icon" onclick="clearChat()" title="清空对话">🗑 清空</button>
+  </div>
+</div>
+
+<!-- Main Layout -->
+<div class="main-layout">
+
+  <!-- Chat Area -->
+  <div class="chat-area">
+    <!-- Prompt Templates -->
+    <div class="prompt-chips" id="promptChips">
+      <span class="prompt-chip" onclick="usePrompt(this)">为新品类「智能穿戴」设计一个打爆方案</span>
+      <span class="prompt-chip" onclick="usePrompt(this)">分析当前美妆品类的竞争格局和机会点</span>
+      <span class="prompt-chip" onclick="usePrompt(this)">制定一个新品上市的7天营销节奏计划</span>
+      <span class="prompt-chip" onclick="usePrompt(this)">如何提升新品的首单转化率？</span>
+    </div>
+
+    <!-- Messages -->
+    <div class="messages" id="messages">
+      <div class="empty-chat" id="emptyChat">
+        <div class="icon">🤖</div>
+        <h3>AI 打爆方案助手</h3>
+        <p>我是你的专属营销策略顾问。请描述你的产品、目标受众和预算，我将为你生成定制化的打爆方案。你也可以点击上方提示词快速开始。</p>
+      </div>
+    </div>
+
+    <!-- Input -->
+    <div class="input-area">
+      <div class="input-row">
+        <textarea class="input-box" id="userInput" placeholder="输入你的问题或需求，例如：为某品牌新品设计一套站内外联动的打爆方案..." rows="1" onkeydown="handleKeyDown(event)"></textarea>
+        <button class="send-btn" id="sendBtn" onclick="sendMessage()">发送</button>
+      </div>
+      <div class="input-hint">Enter 发送 · Shift+Enter 换行</div>
+    </div>
+  </div>
+
+  <!-- Settings Panel -->
+  <div class="settings-panel" id="settingsPanel">
+    <h3>连接设置</h3>
+    <div class="settings-group">
+      <label>API 地址</label>
+      <input class="settings-input" id="cfgBaseUrl" value="https://api.deepseek.com" placeholder="https://api.deepseek.com">
+    </div>
+    <div class="settings-group">
+      <label>Endpoint 路径</label>
+      <input class="settings-input" id="cfgEndpoint" value="/v1/chat/completions" placeholder="/v1/chat/completions">
+    </div>
+    <div class="settings-group">
+      <label>模型名称</label>
+      <input class="settings-input" id="cfgModel" value="deepseek-chat" placeholder="deepseek-chat">
+    </div>
+    <div class="settings-group">
+      <label>Temperature</label>
+      <input class="settings-input" id="cfgTemp" value="0.7" type="number" step="0.1" min="0" max="2">
+    </div>
+    <div class="settings-group">
+      <label>Max Tokens</label>
+      <input class="settings-input" id="cfgMaxTokens" value="4096" type="number" step="256" min="256" max="32768">
+    </div>
+    <div class="settings-group">
+      <label>System Prompt</label>
+      <textarea class="settings-textarea" id="cfgSystemPrompt">你是一位资深的电商营销策略专家，专注于新品打爆方案设计。你精通站内外渠道联动、内容营销、直播带货、社群运营等全链路营销手段。请根据用户提供的信息，给出具体、可落地、有数据支撑的打爆方案建议。回答应结构清晰，包含执行步骤、预算建议、预期ROI等关键要素。</textarea>
+    </div>
+    <div class="settings-group">
+      <label>WebSocket 端口（可选，流式传输）</label>
+      <input class="settings-input" id="cfgWsPort" value="18800" placeholder="18800">
+      <div class="settings-hint">控制面 18800 / 数据面 18801</div>
+    </div>
+    <div style="display:flex;gap:8px;margin-top:8px">
+      <button class="btn-icon" onclick="testConnection()" style="flex:1">🔌 测试连接</button>
+      <button class="btn-icon" onclick="saveSettings()" style="flex:1">💾 保存设置</button>
+    </div>
+  </div>
+
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
+<script>
+// ======================================================================
+// State
+// ======================================================================
+let messages = [];
+let isStreaming = false;
+
+// ======================================================================
+// Settings Persistence
+// ======================================================================
+function getSettings() {
+  return {
+    baseUrl: document.getElementById('cfgBaseUrl').value.trim().replace(/\/+$/, ''),
+    endpoint: document.getElementById('cfgEndpoint').value.trim(),
+    model: document.getElementById('cfgModel').value.trim(),
+    temperature: parseFloat(document.getElementById('cfgTemp').value) || 0.7,
+    maxTokens: parseInt(document.getElementById('cfgMaxTokens').value) || 4096,
+    systemPrompt: document.getElementById('cfgSystemPrompt').value.trim(),
+    wsPort: document.getElementById('cfgWsPort').value.trim()
+  };
+}
+
+function saveSettings() {
+  const s = getSettings();
+  localStorage.setItem('agent_settings', JSON.stringify(s));
+  showToast('设置已保存', 'success');
+}
+
+function loadSettings() {
+  try {
+    const saved = JSON.parse(localStorage.getItem('agent_settings'));
+    if (saved) {
+      document.getElementById('cfgBaseUrl').value = saved.baseUrl || 'https://api.deepseek.com';
+      document.getElementById('cfgEndpoint').value = saved.endpoint || '/v1/chat/completions';
+      document.getElementById('cfgModel').value = saved.model || 'deepseek-chat';
+      document.getElementById('cfgTemp').value = saved.temperature ?? 0.7;
+      document.getElementById('cfgMaxTokens').value = saved.maxTokens || 4096;
+      document.getElementById('cfgSystemPrompt').value = saved.systemPrompt || document.getElementById('cfgSystemPrompt').value;
+      document.getElementById('cfgWsPort').value = saved.wsPort || '18800';
+    }
+  } catch(e) {}
+}
+
+// ======================================================================
+// Connection Test
+// ======================================================================
+async function testConnection() {
+  const s = getSettings();
+  const url = s.baseUrl + s.endpoint;
+  showToast('正在测试连接：' + url, 'info');
+
+  try {
+    const controller = new AbortController();
+    const timeout = setTimeout(() => controller.abort(), 8000);
+
+    const resp = await fetch(url, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Authorization': 'Bearer apikey',
+      },
+      body: JSON.stringify({
+        model: s.model,
+        messages: [{ role: 'user', content: 'Hi' }],
+        max_tokens: 10,
+        stream: false
+      }),
+      signal: controller.signal
+    });
+    clearTimeout(timeout);
+
+    if (resp.ok) {
+      updateConnectionStatus(true);
+      showToast('✅ 连接成功！LLM 服务正常运行', 'success');
+    } else if (resp.status === 404) {
+      updateConnectionStatus(false);
+      showToast('⚠️ 端点未找到 (404)，请检查 Endpoint 路径', 'error');
+    } else if (resp.status === 405) {
+      // Method not allowed - try OPTIONS to check CORS
+      updateConnectionStatus(false);
+      showToast('⚠️ 方法不允许 (405)，请检查 API 地址', 'error');
+    } else {
+      updateConnectionStatus(false);
+      showToast('⚠️ 服务返回状态码 ' + resp.status, 'error');
+    }
+  } catch(err) {
+    updateConnectionStatus(false);
+    if (err.name === 'AbortError') {
+      showToast('⚠️ 连接超时，请检查服务是否启动', 'error');
+    } else {
+      showToast('❌ 连接失败：' + err.message, 'error');
+    }
+  }
+}
+
+function updateConnectionStatus(online) {
+  const dot = document.getElementById('statusDot');
+  const text = document.getElementById('statusText');
+  dot.className = 'status-dot ' + (online ? 'online' : 'offline');
+  text.textContent = online ? '已连接' : '未连接';
+}
+
+// ======================================================================
+// Chat Logic
+// ======================================================================
+function usePrompt(chip) {
+  document.getElementById('userInput').value = chip.textContent.trim();
+  document.getElementById('userInput').focus();
+}
+
+function handleKeyDown(event) {
+  if (event.key === 'Enter' && !event.shiftKey) {
+    event.preventDefault();
+    sendMessage();
+  }
+}
+
+async function sendMessage() {
+  if (isStreaming) return;
+
+  const input = document.getElementById('userInput');
+  const text = input.value.trim();
+  if (!text) return;
+
+  // Add user message
+  addMessage('user', text);
+  input.value = '';
+  input.style.height = 'auto';
+
+  // Hide empty state
+  const emptyChat = document.getElementById('emptyChat');
+  if (emptyChat) emptyChat.style.display = 'none';
+
+  // Show typing indicator
+  const typingId = showTyping();
+
+  // Update button state
+  const sendBtn = document.getElementById('sendBtn');
+  sendBtn.disabled = true;
+  sendBtn.textContent = '...';
+  isStreaming = true;
+
+  try {
+    const reply = await callLLM(text);
+    removeTyping(typingId);
+    addMessage('assistant', reply);
+  } catch(err) {
+    removeTyping(typingId);
+    addMessage('assistant', '❌ 请求失败：' + err.message + '\n\n请检查连接设置或稍后重试。');
+    showToast('请求失败：' + err.message, 'error');
+  } finally {
+    sendBtn.disabled = false;
+    sendBtn.textContent = '发送';
+    isStreaming = false;
+  }
+}
+
+async function callLLM(userMessage) {
+  const s = getSettings();
+  const url = s.baseUrl + s.endpoint;
+
+  // Build messages array
+  const apiMessages = [];
+  if (s.systemPrompt) {
+    apiMessages.push({ role: 'system', content: s.systemPrompt });
+  }
+  // Include recent history (last 20 messages)
+  for (const msg of messages.slice(-20)) {
+    apiMessages.push({ role: msg.role, content: msg.content });
+  }
+  // Add current message
+  apiMessages.push({ role: 'user', content: userMessage });
+
+  const resp = await fetch(url, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'Authorization': 'Bearer sk-685e98e767824663beba9ac54bd70869',
+    },
+    body: JSON.stringify({
+      model: s.model,
+      messages: apiMessages,
+      temperature: s.temperature,
+      max_tokens: s.maxTokens,
+      stream: false
+    })
+  });
+
+  if (!resp.ok) {
+    const errText = await resp.text().catch(() => '');
+    throw new Error(`HTTP ${resp.status}${errText ? ': ' + errText.slice(0, 200) : ''}`);
+  }
+
+  const data = await resp.json();
+  // Handle OpenAI-compatible response format
+  if (data.choices && data.choices[0] && data.choices[0].message) {
+    return data.choices[0].message.content;
+  }
+  // Handle other common formats
+  if (data.content) return data.content;
+  if (data.response) return data.response;
+  if (data.text) return data.text;
+
+  return JSON.stringify(data, null, 2);
+}
+
+function addMessage(role, content) {
+  messages.push({ role, content, time: new Date().toLocaleTimeString('zh-CN', { hour: '2-digit', minute: '2-digit' }) });
+  renderMessages();
+}
+
+function showTyping() {
+  const id = 'typing_' + Date.now();
+  const container = document.getElementById('messages');
+  const div = document.createElement('div');
+  div.id = id;
+  div.className = 'message assistant';
+  div.innerHTML = `
+    <div class="avatar">🤖</div>
+    <div class="bubble">
+      <div class="typing-indicator">
+        <span></span><span></span><span></span>
+      </div>
+    </div>
+  `;
+  container.appendChild(div);
+  container.scrollTop = container.scrollHeight;
+  return id;
+}
+
+function removeTyping(id) {
+  const el = document.getElementById(id);
+  if (el) el.remove();
+}
+
+function renderMessages() {
+  const container = document.getElementById('messages');
+  const emptyChat = document.getElementById('emptyChat');
+
+  let html = '';
+  for (const msg of messages) {
+    const avatar = msg.role === 'user' ? '👤' : '🤖';
+    const content = formatContent(msg.content);
+    html += `
+      <div class="message ${msg.role}">
+        <div class="avatar">${avatar}</div>
+        <div>
+          <div class="bubble">${content}</div>
+          <div class="time">${msg.time}</div>
+        </div>
+      </div>`;
+  }
+  container.innerHTML = html + '<div id="messagesEnd"></div>';
+  container.scrollTop = container.scrollHeight;
+}
+
+function formatContent(text) {
+  if (!text) return '';
+  // Escape HTML
+  let escaped = text
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;');
+  // Code blocks
+  escaped = escaped.replace(/```(\w*)\n?([\s\S]*?)```/g, '<pre><code>$2</code></pre>');
+  // Inline code
+  escaped = escaped.replace(/`([^`]+)`/g, '<code>$1</code>');
+  // Bold
+  escaped = escaped.replace(/\*\*(.+?)\*\*/g, '<strong>$1</strong>');
+  // Line breaks
+  escaped = escaped.replace(/\n/g, '<br>');
+  return escaped;
+}
+
+function clearChat() {
+  if (messages.length > 0 && !confirm('确定要清空所有对话记录吗？')) return;
+  messages = [];
+  const container = document.getElementById('messages');
+  container.innerHTML = `
+    <div class="empty-chat" id="emptyChat">
+      <div class="icon">🤖</div>
+      <h3>AI 打爆方案助手</h3>
+      <p>我是你的专属营销策略顾问。请描述你的产品、目标受众和预算，我将为你生成定制化的打爆方案。你也可以点击上方提示词快速开始。</p>
+    </div>`;
+  showToast('对话已清空', 'info');
+}
+
+// ======================================================================
+// Settings Panel Toggle
+// ======================================================================
+document.getElementById('settingsToggle').addEventListener('click', function() {
+  const panel = document.getElementById('settingsPanel');
+  panel.classList.toggle('open');
+  this.classList.toggle('active');
+});
+
+// ======================================================================
+// Utility
+// ======================================================================
+let toastTimer;
+function showToast(message, type) {
+  const toast = document.getElementById('toast');
+  toast.textContent = message;
+  toast.className = 'toast ' + type + ' show';
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { toast.className = 'toast ' + type; }, 3000);
+}
+
+// Auto-resize textarea
+document.getElementById('userInput').addEventListener('input', function() {
+  this.style.height = 'auto';
+  this.style.height = Math.min(this.scrollHeight, 120) + 'px';
+});
+
+// ======================================================================
+// Initialize
+// ======================================================================
+function init() {
+  loadSettings();
+  // Auto-test connection on load
+  setTimeout(() => {
+    testConnection().catch(() => {});
+  }, 500);
+}
+
+init();
+</script>
+
+</body>
+</html>
